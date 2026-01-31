@@ -66,87 +66,49 @@ type transferStoreMetadata struct {
 func extractTransferStoreInfo(tx *api.CommittedTransaction) map[string]transferStoreMetadata {
 	info := make(map[string]transferStoreMetadata)
 
-	data, err := json.Marshal(tx)
+	userTx, err := tx.UserTransaction()
 	if err != nil {
-		return info
-	}
-
-	var txMap map[string]any
-	if err := json.Unmarshal(data, &txMap); err != nil {
-		return info
-	}
-
-	inner, ok := txMap["Inner"].(map[string]any)
-	if !ok {
-		return info
-	}
-
-	changes, ok := inner["Changes"].([]any)
-	if !ok {
 		return info
 	}
 
 	// Extract owners from ObjectCore
 	owners := make(map[string]string)
-	for _, change := range changes {
-		changeMap, ok := change.(map[string]any)
-		if !ok {
+	for _, change := range userTx.Changes {
+		if change.Type != api.WriteSetChangeVariantWriteResource {
 			continue
 		}
-		if changeMap["Type"] != "write_resource" {
+
+		writeResource, ok := change.Inner.(*api.WriteSetChangeWriteResource)
+		if !ok || writeResource.Data == nil {
 			continue
 		}
-		changeInner, ok := changeMap["Inner"].(map[string]any)
-		if !ok {
+
+		if writeResource.Data.Type != "0x1::object::ObjectCore" {
 			continue
 		}
-		resourceData, ok := changeInner["data"].(map[string]any)
-		if !ok {
-			continue
-		}
-		if resourceData["type"] != "0x1::object::ObjectCore" {
-			continue
-		}
-		address, _ := changeInner["address"].(string)
-		data, ok := resourceData["data"].(map[string]any)
-		if !ok {
-			continue
-		}
-		owner, _ := data["owner"].(string)
+
+		address := writeResource.Address.String()
+		owner := getString(writeResource.Data.Data, "owner")
 		owners[address] = owner
 	}
 
 	// Extract assets from FungibleStore
-	for _, change := range changes {
-		changeMap, ok := change.(map[string]any)
-		if !ok {
+	for _, change := range userTx.Changes {
+		if change.Type != api.WriteSetChangeVariantWriteResource {
 			continue
 		}
-		if changeMap["Type"] != "write_resource" {
+
+		writeResource, ok := change.Inner.(*api.WriteSetChangeWriteResource)
+		if !ok || writeResource.Data == nil {
 			continue
 		}
-		changeInner, ok := changeMap["Inner"].(map[string]any)
-		if !ok {
+
+		if writeResource.Data.Type != "0x1::fungible_asset::FungibleStore" {
 			continue
 		}
-		resourceData, ok := changeInner["data"].(map[string]any)
-		if !ok {
-			continue
-		}
-		resourceType, _ := resourceData["type"].(string)
-		if resourceType != "0x1::fungible_asset::FungibleStore" {
-			continue
-		}
-		address, _ := changeInner["address"].(string)
-		data, ok := resourceData["data"].(map[string]any)
-		if !ok {
-			continue
-		}
-		metadata, ok := data["metadata"].(map[string]any)
-		if !ok {
-			continue
-		}
-		asset, _ := metadata["inner"].(string)
+
+		address := writeResource.Address.String()
+		asset := getString(writeResource.Data.Data, "metadata", "inner")
 
 		info[address] = transferStoreMetadata{
 			owner: owners[address],
@@ -158,37 +120,16 @@ func extractTransferStoreInfo(tx *api.CommittedTransaction) map[string]transferS
 }
 
 func extractTransferEvents(tx *api.CommittedTransaction, storeInfo map[string]transferStoreMetadata, client *aptos.Client, version uint64) []TransferEvent {
-	var events []TransferEvent
+	var result []TransferEvent
 
-	data, err := json.Marshal(tx)
+	userTx, err := tx.UserTransaction()
 	if err != nil {
-		return events
+		return result
 	}
 
-	var txMap map[string]any
-	if err := json.Unmarshal(data, &txMap); err != nil {
-		return events
-	}
-
-	inner, ok := txMap["Inner"].(map[string]any)
-	if !ok {
-		return events
-	}
-
-	txEvents, ok := inner["Events"].([]any)
-	if !ok {
-		return events
-	}
-
-	for _, event := range txEvents {
-		eventMap, ok := event.(map[string]any)
-		if !ok {
-			continue
-		}
-
-		eventType, _ := eventMap["Type"].(string)
+	for _, event := range userTx.Events {
 		var transferType string
-		switch eventType {
+		switch event.Type {
 		case "0x1::fungible_asset::Withdraw":
 			transferType = "withdraw"
 		case "0x1::fungible_asset::Deposit":
@@ -197,20 +138,15 @@ func extractTransferEvents(tx *api.CommittedTransaction, storeInfo map[string]tr
 			continue
 		}
 
-		eventData, ok := eventMap["Data"].(map[string]any)
-		if !ok {
-			continue
-		}
-
-		store, _ := eventData["store"].(string)
-		amount, _ := eventData["amount"].(string)
+		store := getString(event.Data, "store")
+		amount := getString(event.Data, "amount")
 
 		meta, ok := storeInfo[store]
 		if !ok {
 			meta = queryTransferStoreInfo(client, store, version)
 		}
 
-		events = append(events, TransferEvent{
+		result = append(result, TransferEvent{
 			Type:          transferType,
 			Account:       meta.owner,
 			FungibleStore: store,
@@ -219,7 +155,7 @@ func extractTransferEvents(tx *api.CommittedTransaction, storeInfo map[string]tr
 		})
 	}
 
-	return events
+	return result
 }
 
 func queryTransferStoreInfo(client *aptos.Client, store string, version uint64) transferStoreMetadata {
@@ -232,22 +168,12 @@ func queryTransferStoreInfo(client *aptos.Client, store string, version uint64) 
 
 	objCore, err := client.AccountResource(addr, "0x1::object::ObjectCore", version)
 	if err == nil {
-		if data, ok := objCore["data"].(map[string]any); ok {
-			if owner, ok := data["owner"].(string); ok {
-				meta.owner = owner
-			}
-		}
+		meta.owner = getString(objCore, "data", "owner")
 	}
 
 	fsResource, err := client.AccountResource(addr, "0x1::fungible_asset::FungibleStore", version)
 	if err == nil {
-		if data, ok := fsResource["data"].(map[string]any); ok {
-			if metadata, ok := data["metadata"].(map[string]any); ok {
-				if asset, ok := metadata["inner"].(string); ok {
-					meta.asset = asset
-				}
-			}
-		}
+		meta.asset = getString(fsResource, "data", "metadata", "inner")
 	}
 
 	return meta

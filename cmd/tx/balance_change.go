@@ -72,11 +72,7 @@ func runBalanceChange(cmd *cobra.Command, args []string) error {
 		prevBalance := "0"
 		prevResource, err := client.AccountResource(addr, "0x1::fungible_asset::FungibleStore", version-1)
 		if err == nil {
-			if data, ok := prevResource["data"].(map[string]any); ok {
-				if bal, ok := data["balance"].(string); ok {
-					prevBalance = bal
-				}
-			}
+			prevBalance = getString(prevResource, "data", "balance")
 		}
 
 		change := calculateChange(prevBalance, store.balance)
@@ -105,105 +101,50 @@ func runBalanceChange(cmd *cobra.Command, args []string) error {
 func extractFungibleStores(tx *api.CommittedTransaction) []fungibleStoreInfo {
 	var stores []fungibleStoreInfo
 
-	// Marshal to JSON and unmarshal to map for easier traversal
-	data, err := json.Marshal(tx)
+	userTx, err := tx.UserTransaction()
 	if err != nil {
-		return stores
-	}
-
-	var txMap map[string]any
-	if err := json.Unmarshal(data, &txMap); err != nil {
-		return stores
-	}
-
-	// Get Inner which contains Changes
-	inner, ok := txMap["Inner"].(map[string]any)
-	if !ok {
-		return stores
-	}
-
-	changes, ok := inner["Changes"].([]any)
-	if !ok {
 		return stores
 	}
 
 	// First pass: extract ObjectCore owners (address -> owner)
 	owners := make(map[string]string)
-	for _, change := range changes {
-		changeMap, ok := change.(map[string]any)
-		if !ok {
+	for _, change := range userTx.Changes {
+		if change.Type != api.WriteSetChangeVariantWriteResource {
 			continue
 		}
 
-		changeType, _ := changeMap["Type"].(string)
-		if changeType != "write_resource" {
+		writeResource, ok := change.Inner.(*api.WriteSetChangeWriteResource)
+		if !ok || writeResource.Data == nil {
 			continue
 		}
 
-		changeInner, ok := changeMap["Inner"].(map[string]any)
-		if !ok {
+		if writeResource.Data.Type != "0x1::object::ObjectCore" {
 			continue
 		}
 
-		resourceData, ok := changeInner["data"].(map[string]any)
-		if !ok {
-			continue
-		}
-
-		resourceType, _ := resourceData["type"].(string)
-		if resourceType != "0x1::object::ObjectCore" {
-			continue
-		}
-
-		address, _ := changeInner["address"].(string)
-		data, ok := resourceData["data"].(map[string]any)
-		if !ok {
-			continue
-		}
-
-		owner, _ := data["owner"].(string)
+		address := writeResource.Address.String()
+		owner := getString(writeResource.Data.Data, "owner")
 		owners[address] = owner
 	}
 
 	// Second pass: extract FungibleStores
-	for _, change := range changes {
-		changeMap, ok := change.(map[string]any)
-		if !ok {
+	for _, change := range userTx.Changes {
+		if change.Type != api.WriteSetChangeVariantWriteResource {
 			continue
 		}
 
-		changeType, _ := changeMap["Type"].(string)
-		if changeType != "write_resource" {
+		writeResource, ok := change.Inner.(*api.WriteSetChangeWriteResource)
+		if !ok || writeResource.Data == nil {
 			continue
 		}
 
-		changeInner, ok := changeMap["Inner"].(map[string]any)
-		if !ok {
+		if !strings.Contains(writeResource.Data.Type, "fungible_asset::FungibleStore") {
 			continue
 		}
 
-		resourceData, ok := changeInner["data"].(map[string]any)
-		if !ok {
-			continue
-		}
-
-		resourceType, _ := resourceData["type"].(string)
-		if !strings.Contains(resourceType, "fungible_asset::FungibleStore") {
-			continue
-		}
-
-		address, _ := changeInner["address"].(string)
-		data, ok := resourceData["data"].(map[string]any)
-		if !ok {
-			continue
-		}
-
-		balance, _ := data["balance"].(string)
-		metadata, ok := data["metadata"].(map[string]any)
-		if !ok {
-			continue
-		}
-		metadataInner, _ := metadata["inner"].(string)
+		address := writeResource.Address.String()
+		balance := getString(writeResource.Data.Data, "balance")
+		metadataInner := getString(writeResource.Data.Data, "metadata", "inner")
 
 		stores = append(stores, fungibleStoreInfo{
 			address:   address,
