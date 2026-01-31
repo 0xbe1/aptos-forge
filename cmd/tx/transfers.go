@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strconv"
 
 	"github.com/aptos-labs/aptos-go-sdk"
 	"github.com/aptos-labs/aptos-go-sdk/api"
@@ -12,7 +11,7 @@ import (
 )
 
 var transfersCmd = &cobra.Command{
-	Use:   "transfers <tx_version>",
+	Use:   "transfers <version_or_hash>",
 	Short: "Show asset transfers in a transaction",
 	Long:  `Lists Withdraw/Deposit events from a transaction.`,
 	Args:  cobra.ExactArgs(1),
@@ -28,26 +27,21 @@ type TransferEvent struct {
 }
 
 func runTransfers(cmd *cobra.Command, args []string) error {
-	version, err := strconv.ParseUint(args[0], 10, 64)
-	if err != nil {
-		return fmt.Errorf("invalid transaction version: %w", err)
-	}
-
 	client, err := aptos.NewClient(aptos.MainnetConfig)
 	if err != nil {
 		return fmt.Errorf("failed to create client: %w", err)
 	}
 
-	tx, err := client.TransactionByVersion(version)
+	userTx, version, err := fetchTransaction(client, args[0])
 	if err != nil {
-		return fmt.Errorf("failed to fetch transaction %d: %w", version, err)
+		return err
 	}
 
 	// Extract store info from tx changes
-	storeInfo := extractTransferStoreInfo(tx)
+	storeInfo := extractTransferStoreInfoFromUserTx(userTx)
 
 	// Extract flow events
-	events := extractTransferEvents(tx, storeInfo, client, version)
+	events := extractTransferEventsFromUserTx(userTx, storeInfo, client, version)
 
 	encoder := json.NewEncoder(os.Stdout)
 	encoder.SetIndent("", "  ")
@@ -63,13 +57,8 @@ type transferStoreMetadata struct {
 	asset string
 }
 
-func extractTransferStoreInfo(tx *api.CommittedTransaction) map[string]transferStoreMetadata {
+func extractTransferStoreInfoFromUserTx(userTx *api.UserTransaction) map[string]transferStoreMetadata {
 	info := make(map[string]transferStoreMetadata)
-
-	userTx, err := tx.UserTransaction()
-	if err != nil {
-		return info
-	}
 
 	// Extract owners from ObjectCore
 	owners := make(map[string]string)
@@ -119,13 +108,8 @@ func extractTransferStoreInfo(tx *api.CommittedTransaction) map[string]transferS
 	return info
 }
 
-func extractTransferEvents(tx *api.CommittedTransaction, storeInfo map[string]transferStoreMetadata, client *aptos.Client, version uint64) []TransferEvent {
+func extractTransferEventsFromUserTx(userTx *api.UserTransaction, storeInfo map[string]transferStoreMetadata, client *aptos.Client, version uint64) []TransferEvent {
 	var result []TransferEvent
-
-	userTx, err := tx.UserTransaction()
-	if err != nil {
-		return result
-	}
 
 	for _, event := range userTx.Events {
 		var transferType string

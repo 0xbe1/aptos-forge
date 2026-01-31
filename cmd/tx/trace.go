@@ -25,7 +25,7 @@ type CallTrace struct {
 }
 
 var traceCmd = &cobra.Command{
-	Use:   "trace <tx_version>",
+	Use:   "trace <version_or_hash>",
 	Short: "Show call trace for a transaction",
 	Long:  `Fetches and displays the call trace for an Aptos transaction from Sentio.`,
 	Args:  cobra.ExactArgs(1),
@@ -33,22 +33,22 @@ var traceCmd = &cobra.Command{
 }
 
 func runTrace(cmd *cobra.Command, args []string) error {
-	version, err := strconv.ParseUint(args[0], 10, 64)
-	if err != nil {
-		return fmt.Errorf("invalid transaction version: %w", err)
+	hash := args[0]
+
+	// If version, fetch transaction to get hash
+	if version, err := strconv.ParseUint(args[0], 10, 64); err == nil {
+		client, err := aptos.NewClient(aptos.MainnetConfig)
+		if err != nil {
+			return fmt.Errorf("failed to create client: %w", err)
+		}
+		tx, err := client.TransactionByVersion(version)
+		if err != nil {
+			return fmt.Errorf("failed to fetch transaction %d: %w", version, err)
+		}
+		hash = string(tx.Hash())
 	}
 
-	client, err := aptos.NewClient(aptos.MainnetConfig)
-	if err != nil {
-		return fmt.Errorf("failed to create client: %w", err)
-	}
-
-	tx, err := client.TransactionByVersion(version)
-	if err != nil {
-		return fmt.Errorf("failed to fetch transaction %d: %w", version, err)
-	}
-
-	url := fmt.Sprintf("https://app.sentio.xyz/api/v1/move/call_trace?networkId=1&txHash=%s", tx.Hash())
+	url := fmt.Sprintf("https://app.sentio.xyz/api/v1/move/call_trace?networkId=1&txHash=%s", hash)
 
 	resp, err := http.Get(url)
 	if err != nil {

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math/big"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/aptos-labs/aptos-go-sdk"
@@ -14,9 +13,9 @@ import (
 )
 
 var balanceChangeCmd = &cobra.Command{
-	Use:   "balance-change <tx_version>",
+	Use:   "balance-change <version_or_hash>",
 	Short: "Show balance changes in a transaction",
-	Long:  `Analyzes FungibleStore balance changes between tx_version and tx_version-1.`,
+	Long:  `Analyzes FungibleStore balance changes between the transaction and the previous version.`,
 	Args:  cobra.ExactArgs(1),
 	RunE:  runBalanceChange,
 }
@@ -38,28 +37,22 @@ type fungibleStoreInfo struct {
 }
 
 func runBalanceChange(cmd *cobra.Command, args []string) error {
-	version, err := strconv.ParseUint(args[0], 10, 64)
+	client, err := aptos.NewClient(aptos.MainnetConfig)
 	if err != nil {
-		return fmt.Errorf("invalid transaction version: %w", err)
+		return fmt.Errorf("failed to create client: %w", err)
+	}
+
+	userTx, version, err := fetchTransaction(client, args[0])
+	if err != nil {
+		return err
 	}
 
 	if version == 0 {
 		return fmt.Errorf("cannot get balance change for version 0")
 	}
 
-	client, err := aptos.NewClient(aptos.MainnetConfig)
-	if err != nil {
-		return fmt.Errorf("failed to create client: %w", err)
-	}
-
-	// Fetch current transaction
-	txCurrent, err := client.TransactionByVersion(version)
-	if err != nil {
-		return fmt.Errorf("failed to fetch transaction %d: %w", version, err)
-	}
-
 	// Extract FungibleStore changes from current transaction
-	stores := extractFungibleStores(txCurrent)
+	stores := extractFungibleStoresFromUserTx(userTx)
 
 	// For each store, query the previous balance at version-1
 	changes := []BalanceChange{}
@@ -98,13 +91,8 @@ func runBalanceChange(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func extractFungibleStores(tx *api.CommittedTransaction) []fungibleStoreInfo {
+func extractFungibleStoresFromUserTx(userTx *api.UserTransaction) []fungibleStoreInfo {
 	var stores []fungibleStoreInfo
-
-	userTx, err := tx.UserTransaction()
-	if err != nil {
-		return stores
-	}
 
 	// First pass: extract ObjectCore owners (address -> owner)
 	owners := make(map[string]string)
