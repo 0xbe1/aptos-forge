@@ -3,10 +3,13 @@ package tx
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"os"
+	"strings"
 
 	"github.com/aptos-labs/aptos-go-sdk"
 	"github.com/aptos-labs/aptos-go-sdk/api"
+	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/spf13/cobra"
 )
 
@@ -62,7 +65,7 @@ func runGraph(cmd *cobra.Command, args []string) error {
 	graph := buildTransferGraph(userTx, storeInfo, client, version)
 
 	if prettyOutput {
-		printPrettyGraph(graph)
+		printPrettyGraph(graph, client)
 		return nil
 	}
 
@@ -146,7 +149,116 @@ func buildTransferGraph(userTx *api.UserTransaction, storeInfo map[string]transf
 	return graph
 }
 
-func printPrettyGraph(graph TransferGraph) {
+type assetMetadata struct {
+	symbol   string
+	decimals uint8
+}
+
+func queryAssetMetadata(client *aptos.Client, asset string) assetMetadata {
+	meta := assetMetadata{symbol: "", decimals: 0}
+
+	addr := aptos.AccountAddress{}
+	if err := addr.ParseStringRelaxed(asset); err != nil {
+		return meta
+	}
+
+	addrBytes, err := bcs.Serialize(&addr)
+	if err != nil {
+		return meta
+	}
+
+	// Type argument: 0x1::fungible_asset::Metadata
+	metadataTypeTag := aptos.NewTypeTag(&aptos.StructTag{
+		Address:    aptos.AccountOne,
+		Module:     "fungible_asset",
+		Name:       "Metadata",
+		TypeParams: []aptos.TypeTag{},
+	})
+
+	// Query symbol
+	symbolPayload := &aptos.ViewPayload{
+		Module:   aptos.ModuleId{Address: aptos.AccountOne, Name: "fungible_asset"},
+		Function: "symbol",
+		ArgTypes: []aptos.TypeTag{metadataTypeTag},
+		Args:     [][]byte{addrBytes},
+	}
+	if result, err := client.View(symbolPayload); err == nil && len(result) > 0 {
+		if symbol, ok := result[0].(string); ok {
+			meta.symbol = symbol
+		}
+	}
+
+	// Query decimals
+	decimalsPayload := &aptos.ViewPayload{
+		Module:   aptos.ModuleId{Address: aptos.AccountOne, Name: "fungible_asset"},
+		Function: "decimals",
+		ArgTypes: []aptos.TypeTag{metadataTypeTag},
+		Args:     [][]byte{addrBytes},
+	}
+	if result, err := client.View(decimalsPayload); err == nil && len(result) > 0 {
+		if decimals, ok := result[0].(float64); ok {
+			meta.decimals = uint8(decimals)
+		}
+	}
+
+	return meta
+}
+
+func formatAmount(amount string, decimals uint8) string {
+	if decimals == 0 {
+		return amount
+	}
+
+	// Parse the amount as a big integer
+	val := new(big.Int)
+	if _, ok := val.SetString(amount, 10); !ok {
+		return amount
+	}
+
+	// Calculate divisor (10^decimals)
+	divisor := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(decimals)), nil)
+
+	// Get integer and fractional parts
+	intPart := new(big.Int).Div(val, divisor)
+	fracPart := new(big.Int).Mod(val, divisor)
+
+	// Format fractional part with leading zeros
+	fracStr := fmt.Sprintf("%0*s", decimals, fracPart.String())
+	// Trim trailing zeros
+	fracStr = strings.TrimRight(fracStr, "0")
+
+	if fracStr == "" {
+		return intPart.String()
+	}
+	return fmt.Sprintf("%s.%s", intPart.String(), fracStr)
+}
+
+func formatAsset(asset string, meta assetMetadata) string {
+	if meta.symbol != "" {
+		return fmt.Sprintf("%s (%s)", meta.symbol, truncateAddress(asset))
+	}
+	return truncateAddress(asset)
+}
+
+func printPrettyGraph(graph TransferGraph, client *aptos.Client) {
+	// Collect all unique assets
+	assets := make(map[string]bool)
+	for _, t := range graph.Transfers {
+		assets[t.Asset] = true
+	}
+	for _, o := range graph.Orphans.In {
+		assets[o.Asset] = true
+	}
+	for _, o := range graph.Orphans.Out {
+		assets[o.Asset] = true
+	}
+
+	// Fetch metadata for all assets
+	assetMeta := make(map[string]assetMetadata)
+	for asset := range assets {
+		assetMeta[asset] = queryAssetMetadata(client, asset)
+	}
+
 	// Group transfers by sender
 	bySender := make(map[string][]Transfer)
 	for _, t := range graph.Transfers {
@@ -156,7 +268,11 @@ func printPrettyGraph(graph TransferGraph) {
 	for sender, transfers := range bySender {
 		fmt.Println(truncateAddress(sender))
 		for _, t := range transfers {
-			fmt.Printf("  → %s   %s %s\n", truncateAddress(t.To), t.Amount, truncateAddress(t.Asset))
+			meta := assetMeta[t.Asset]
+			fmt.Printf("  → %s   %s %s\n",
+				truncateAddress(t.To),
+				formatAmount(t.Amount, meta.decimals),
+				formatAsset(t.Asset, meta))
 		}
 		fmt.Println()
 	}
@@ -164,10 +280,18 @@ func printPrettyGraph(graph TransferGraph) {
 	if len(graph.Orphans.In) > 0 || len(graph.Orphans.Out) > 0 {
 		fmt.Println("Orphans:")
 		for _, o := range graph.Orphans.In {
-			fmt.Printf("  IN:  %s  %s %s\n", truncateAddress(o.Account), o.Amount, truncateAddress(o.Asset))
+			meta := assetMeta[o.Asset]
+			fmt.Printf("  IN:  %s  %s %s\n",
+				truncateAddress(o.Account),
+				formatAmount(o.Amount, meta.decimals),
+				formatAsset(o.Asset, meta))
 		}
 		for _, o := range graph.Orphans.Out {
-			fmt.Printf("  OUT: %s  %s %s\n", truncateAddress(o.Account), o.Amount, truncateAddress(o.Asset))
+			meta := assetMeta[o.Asset]
+			fmt.Printf("  OUT: %s  %s %s\n",
+				truncateAddress(o.Account),
+				formatAmount(o.Amount, meta.decimals),
+				formatAsset(o.Asset, meta))
 		}
 	}
 }
