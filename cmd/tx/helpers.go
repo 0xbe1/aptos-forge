@@ -21,74 +21,18 @@ func isStdinPipe() bool {
 }
 
 // readTransactionFromStdin reads and unmarshals UserTransaction from stdin.
-// It normalizes the JSON format to be compatible with the SDK's UnmarshalJSON.
 func readTransactionFromStdin() (*api.UserTransaction, error) {
 	data, err := io.ReadAll(os.Stdin)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read from stdin: %w", err)
 	}
 
-	// First, try to unmarshal directly (works if JSON is in API format)
 	var userTx api.UserTransaction
-	if err := json.Unmarshal(data, &userTx); err == nil {
-		return &userTx, nil
-	}
-
-	// If that fails, try normalizing the JSON
-	// This handles cases where numbers weren't converted to strings
-	normalized, err := normalizeTransactionJSON(data)
-	if err != nil {
-		return nil, fmt.Errorf("failed to normalize transaction JSON: %w", err)
-	}
-
-	if err := json.Unmarshal(normalized, &userTx); err != nil {
+	if err := json.Unmarshal(data, &userTx); err != nil {
 		return nil, fmt.Errorf("failed to parse transaction JSON: %w", err)
 	}
 
 	return &userTx, nil
-}
-
-// normalizeTransactionJSON converts numeric fields to strings for SDK compatibility
-func normalizeTransactionJSON(data []byte) ([]byte, error) {
-	var raw map[string]any
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return nil, err
-	}
-
-	normalizeMap(raw)
-	return json.Marshal(raw)
-}
-
-// normalizeMap recursively converts numeric values to strings for SDK compatibility
-func normalizeMap(m map[string]any) {
-	numericFields := map[string]bool{
-		"version": true, "Version": true,
-		"gas_used": true, "GasUsed": true,
-		"sequence_number": true, "SequenceNumber": true,
-		"max_gas_amount": true, "MaxGasAmount": true,
-		"gas_unit_price": true, "GasUnitPrice": true,
-		"expiration_timestamp_secs": true, "ExpirationTimestampSecs": true,
-		"timestamp": true, "Timestamp": true,
-		"creation_num": true, "CreationNumber": true,
-		"counter": true,
-	}
-
-	for key, value := range m {
-		switch v := value.(type) {
-		case float64:
-			if numericFields[key] {
-				m[key] = strconv.FormatUint(uint64(v), 10)
-			}
-		case map[string]any:
-			normalizeMap(v)
-		case []any:
-			for _, item := range v {
-				if itemMap, ok := item.(map[string]any); ok {
-					normalizeMap(itemMap)
-				}
-			}
-		}
-	}
 }
 
 // getTransaction returns a transaction from stdin or fetches it from the API.
