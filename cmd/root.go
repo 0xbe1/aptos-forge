@@ -3,6 +3,7 @@ package cmd
 import (
 	"os"
 
+	"github.com/0xbe1/apt/cmd/ledger"
 	"github.com/0xbe1/apt/cmd/tx"
 	"github.com/spf13/cobra"
 )
@@ -21,5 +22,6 @@ func Execute() {
 }
 
 func init() {
+	rootCmd.AddCommand(ledger.LedgerCmd)
 	rootCmd.AddCommand(tx.TxCmd)
 }
