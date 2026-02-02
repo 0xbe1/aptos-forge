@@ -12,7 +12,7 @@ var TxCmd = &cobra.Command{
 	Use:   "tx <version_or_hash>",
 	Short: "Transaction commands",
 	Long:  `View and analyze Aptos transactions. Run with a version or hash to view the raw transaction.`,
-	Args:  cobra.MaximumNArgs(1),
+	Args:  cobra.ExactArgs(1),
 	RunE:  runTx,
 }
 
@@ -25,10 +25,6 @@ func init() {
 }
 
 func runTx(cmd *cobra.Command, args []string) error {
-	if len(args) == 0 {
-		return cmd.Help()
-	}
-
 	var url string
 	if _, err := strconv.ParseUint(args[0], 10, 64); err == nil {
 		url = fmt.Sprintf("%s/transactions/by_version/%s", api.BaseURL, args[0])

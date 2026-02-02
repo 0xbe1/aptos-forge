@@ -17,7 +17,7 @@ var BlockCmd = &cobra.Command{
 Examples:
   apt block 1000000
   apt block 1000000 --with-transactions`,
-	Args: cobra.MaximumNArgs(1),
+	Args: cobra.ExactArgs(1),
 	RunE: runBlock,
 }
 
@@ -27,8 +27,5 @@ func init() {
 }
 
 func runBlock(cmd *cobra.Command, args []string) error {
-	if len(args) == 0 {
-		return cmd.Help()
-	}
 	return api.GetAndPrint(fmt.Sprintf("%s/blocks/by_height/%s?with_transactions=%t", api.BaseURL, args[0], withTransactions))
 }

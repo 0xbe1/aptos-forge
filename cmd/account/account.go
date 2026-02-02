@@ -11,7 +11,7 @@ var AccountCmd = &cobra.Command{
 	Use:   "account <address>",
 	Short: "Get account information",
 	Long:  `Fetches and displays account information (authentication key, sequence number) from the Aptos mainnet.`,
-	Args:  cobra.MaximumNArgs(1),
+	Args:  cobra.ExactArgs(1),
 	RunE:  runAccount,
 }
 
@@ -25,8 +25,5 @@ func init() {
 }
 
 func runAccount(cmd *cobra.Command, args []string) error {
-	if len(args) == 0 {
-		return cmd.Help()
-	}
 	return api.GetAndPrint(fmt.Sprintf("%s/accounts/%s", api.BaseURL, args[0]))
 }
