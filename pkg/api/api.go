@@ -9,7 +9,7 @@ import (
 	"os"
 )
 
-const BaseURL = "https://api.mainnet.aptoslabs.com/v1"
+var BaseURL = "https://api.mainnet.aptoslabs.com/v1"
 
 // GetAndPrint makes a GET request to the URL and prints the JSON response.
 func GetAndPrint(url string) error {
