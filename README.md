@@ -12,6 +12,20 @@ curl -sSL https://raw.githubusercontent.com/0xbe1/aptly/main/install.sh | sh
 go install github.com/0xbe1/aptly@latest
 ```
 
+## Claude Code Integration
+
+Let Claude Code explore Aptos blockchain using aptly:
+
+```bash
+# 1. Install aptly CLI (if not already)
+curl -sSL https://raw.githubusercontent.com/0xbe1/aptly/main/install.sh | sh
+
+# 2. Install Claude Code skill
+curl -sSL https://raw.githubusercontent.com/0xbe1/aptly/main/install-skill.sh | sh
+```
+
+Then ask Claude: "Show me interface of echelon market"
+
 ## Usage
 
 ```bash
