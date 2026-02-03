@@ -1,4 +1,4 @@
-module github.com/0xbe1/apt
+module github.com/0xbe1/aptly
 
 go 1.25.5
 

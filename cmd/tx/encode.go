@@ -6,7 +6,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/0xbe1/apt/pkg/api"
+	"github.com/0xbe1/aptly/pkg/api"
 	"github.com/spf13/cobra"
 )
 

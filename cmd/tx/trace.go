@@ -8,7 +8,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/0xbe1/apt/pkg/api"
+	"github.com/0xbe1/aptly/pkg/api"
 	"github.com/aptos-labs/aptos-go-sdk"
 	"github.com/spf13/cobra"
 )

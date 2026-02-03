@@ -9,7 +9,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/0xbe1/apt/pkg/api"
+	"github.com/0xbe1/aptly/pkg/api"
 	"github.com/aptos-labs/aptos-go-sdk"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
