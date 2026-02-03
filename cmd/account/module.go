@@ -1,11 +1,7 @@
 package account
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
-	"os"
 
 	"github.com/0xbe1/aptly/pkg/api"
 	"github.com/spf13/cobra"
@@ -35,39 +31,22 @@ func init() {
 }
 
 func runModule(cmd *cobra.Command, args []string) error {
-	// If no filter flags, use the simple path
-	if !moduleABI && !moduleBytecode {
-		return api.GetAndPrint(fmt.Sprintf("%s/accounts/%s/module/%s", api.BaseURL, args[0], args[1]))
-	}
-
-	// Fetch the module data
 	url := fmt.Sprintf("%s/accounts/%s/module/%s", api.BaseURL, args[0], args[1])
-	resp, err := http.Get(url)
+
+	// If no filter flags, print everything
+	if !moduleABI && !moduleBytecode {
+		return api.GetAndPrint(url)
+	}
+
+	// Fetch and extract the requested field
+	data, err := api.GetJSON(url)
 	if err != nil {
-		return fmt.Errorf("request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("failed to read response: %w", err)
+		return err
 	}
 
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("API error (status %d): %s", resp.StatusCode, string(body))
-	}
-
-	var module map[string]any
-	if err := json.Unmarshal(body, &module); err != nil {
-		return fmt.Errorf("failed to parse response: %w", err)
-	}
-
-	// Output filtered result
-	encoder := json.NewEncoder(os.Stdout)
-	encoder.SetIndent("", "  ")
-
+	module := data.(map[string]any)
 	if moduleABI {
-		return encoder.Encode(module["abi"])
+		return api.PrintJSON(module["abi"])
 	}
-	return encoder.Encode(module["bytecode"])
+	return api.PrintJSON(module["bytecode"])
 }

@@ -20,15 +20,45 @@ func GetNetworkConfig() aptos.NetworkConfig {
 	}
 }
 
-// GetAndPrint makes a GET request to the URL and prints the JSON response.
-func GetAndPrint(url string) error {
+// GetJSON makes a GET request and returns the parsed JSON response.
+func GetJSON(url string) (any, error) {
 	resp, err := http.Get(url)
 	if err != nil {
-		return fmt.Errorf("request failed: %w", err)
+		return nil, fmt.Errorf("request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
-	return handleResponse(resp, false)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
+		return nil, fmt.Errorf("API error (status %d): %s", resp.StatusCode, string(body))
+	}
+
+	var data any
+	if err := json.Unmarshal(body, &data); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return data, nil
+}
+
+// PrintJSON pretty-prints data as JSON to stdout.
+func PrintJSON(data any) error {
+	encoder := json.NewEncoder(os.Stdout)
+	encoder.SetIndent("", "  ")
+	return encoder.Encode(data)
+}
+
+// GetAndPrint makes a GET request to the URL and prints the JSON response.
+func GetAndPrint(url string) error {
+	data, err := GetJSON(url)
+	if err != nil {
+		return err
+	}
+	return PrintJSON(data)
 }
 
 // PostAndPrint makes a POST request with JSON body and prints the JSON response.
@@ -84,7 +114,5 @@ func handleResponse(resp *http.Response, extractFirst bool) error {
 		data = arr[0]
 	}
 
-	encoder := json.NewEncoder(os.Stdout)
-	encoder.SetIndent("", "  ")
-	return encoder.Encode(data)
+	return PrintJSON(data)
 }
