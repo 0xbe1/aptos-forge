@@ -1,11 +1,9 @@
 package tx
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"strings"
 
@@ -116,41 +114,5 @@ func runSimulate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to serialize transaction: %w", err)
 	}
 
-	// POST to simulate endpoint
-	resp, err := http.Post(
-		api.BaseURL+"/transactions/simulate",
-		"application/x.aptos.signed_transaction+bcs",
-		bytes.NewReader(txnBytes),
-	)
-	if err != nil {
-		return fmt.Errorf("failed to simulate transaction: %w", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("failed to read response: %w", err)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("simulation failed (status %d): %s", resp.StatusCode, string(body))
-	}
-
-	// Parse and pretty-print the response
-	var result []any
-	if err := json.Unmarshal(body, &result); err != nil {
-		return fmt.Errorf("failed to parse response: %w", err)
-	}
-
-	if len(result) == 0 {
-		return fmt.Errorf("no simulation result returned")
-	}
-
-	encoder := json.NewEncoder(os.Stdout)
-	encoder.SetIndent("", "  ")
-	if err := encoder.Encode(result[0]); err != nil {
-		return fmt.Errorf("failed to encode response: %w", err)
-	}
-
-	return nil
+	return api.PostBCSAndPrint(api.BaseURL+"/transactions/simulate", txnBytes)
 }
