@@ -23,6 +23,7 @@ func init() {
 	AccountCmd.AddCommand(balanceCmd)
 	AccountCmd.AddCommand(txsCmd)
 	AccountCmd.AddCommand(sendsCmd)
+	AccountCmd.AddCommand(sourceCodeCmd)
 }
 
 func runAccount(cmd *cobra.Command, args []string) error {
