@@ -36,13 +36,13 @@ jobs:
 
       - name: Create archive
         run: |
-          tar -czvf aptly_darwin_amd64.tar.gz aptly
+          tar -czvf aptly_${{ steps.version.outputs.VERSION }}_darwin_amd64.tar.gz aptly
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: aptly_darwin_amd64
-          path: aptly_darwin_amd64.tar.gz
+          path: aptly_${{ steps.version.outputs.VERSION }}_darwin_amd64.tar.gz
 
   build-darwin-arm64:
     runs-on: macos-latest
@@ -71,13 +71,13 @@ jobs:
 
       - name: Create archive
         run: |
-          tar -czvf aptly_darwin_arm64.tar.gz aptly
+          tar -czvf aptly_${{ steps.version.outputs.VERSION }}_darwin_arm64.tar.gz aptly
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: aptly_darwin_arm64
-          path: aptly_darwin_arm64.tar.gz
+          path: aptly_${{ steps.version.outputs.VERSION }}_darwin_arm64.tar.gz
 
   build-linux:
     runs-on: ubuntu-latest
@@ -113,13 +113,13 @@ jobs:
 
       - name: Create archive
         run: |
-          tar -czvf aptly_linux_${{ matrix.arch }}.tar.gz aptly
+          tar -czvf aptly_${{ steps.version.outputs.VERSION }}_linux_${{ matrix.arch }}.tar.gz aptly
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: aptly_linux_${{ matrix.arch }}
-          path: aptly_linux_${{ matrix.arch }}.tar.gz
+          path: aptly_${{ steps.version.outputs.VERSION }}_linux_${{ matrix.arch }}.tar.gz
 
   publish:
     needs: [build-darwin-amd64, build-darwin-arm64, build-linux]
@@ -159,21 +159,7 @@ jobs:
           echo "Download the appropriate archive for your platform and extract the binary:" >> changelog.md
           echo "" >> changelog.md
           echo '```bash' >> changelog.md
-          echo "# macOS (Apple Silicon)" >> changelog.md
-          echo "curl -sL https://github.com/0xbe1/aptly/releases/latest/download/aptly_darwin_arm64.tar.gz | tar xz" >> changelog.md
-          echo "sudo mv aptly /usr/local/bin/" >> changelog.md
-          echo "" >> changelog.md
-          echo "# macOS (Intel)" >> changelog.md
-          echo "curl -sL https://github.com/0xbe1/aptly/releases/latest/download/aptly_darwin_amd64.tar.gz | tar xz" >> changelog.md
-          echo "sudo mv aptly /usr/local/bin/" >> changelog.md
-          echo "" >> changelog.md
-          echo "# Linux (x86_64)" >> changelog.md
-          echo "curl -sL https://github.com/0xbe1/aptly/releases/latest/download/aptly_linux_amd64.tar.gz | tar xz" >> changelog.md
-          echo "sudo mv aptly /usr/local/bin/" >> changelog.md
-          echo "" >> changelog.md
-          echo "# Linux (ARM64)" >> changelog.md
-          echo "curl -sL https://github.com/0xbe1/aptly/releases/latest/download/aptly_linux_arm64.tar.gz | tar xz" >> changelog.md
-          echo "sudo mv aptly /usr/local/bin/" >> changelog.md
+          echo "curl -sSL https://raw.githubusercontent.com/0xbe1/aptly/main/install.sh | sh" >> changelog.md
           echo '```' >> changelog.md
 
       - name: Create GitHub Release
