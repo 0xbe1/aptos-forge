@@ -24,8 +24,12 @@ var sendsCmd = &cobra.Command{
 	Short: "List outgoing asset transfers sent by an account",
 	Long: `Fetches and displays outgoing asset transfers sent by an account from the Aptos mainnet.
 
-Note: This only shows transactions where the account is the sender. Incoming transfers
-are not included because they are initiated by other accounts.
+Notes:
+  - Only shows transactions where the account is the sender. Incoming transfers
+    are not included because they are initiated by other accounts.
+  - The --limit flag limits the number of account transactions scanned, not the
+    number of sends returned. Fewer sends may be returned if not all transactions
+    are asset transfers.
 
 Detects transfers from:
   - 0x1::aptos_account::transfer_coins
@@ -41,7 +45,7 @@ Examples:
 }
 
 func init() {
-	sendsCmd.Flags().Uint64Var(&sendsLimit, "limit", 25, "Maximum number of transactions to fetch")
+	sendsCmd.Flags().Uint64Var(&sendsLimit, "limit", 25, "Maximum number of account transactions to scan (not sends returned)")
 	sendsCmd.Flags().BoolVar(&sendsPretty, "pretty", false, "Output in simple line format")
 }
 
