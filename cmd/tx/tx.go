@@ -18,7 +18,6 @@ var TxCmd = &cobra.Command{
 
 func init() {
 	TxCmd.AddCommand(balanceChangeCmd)
-	TxCmd.AddCommand(transfersCmd)
 	TxCmd.AddCommand(traceCmd)
 	TxCmd.AddCommand(graphCmd)
 	TxCmd.AddCommand(simulateCmd)
