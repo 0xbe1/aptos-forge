@@ -123,11 +123,3 @@ aptly table item <handle> --key-type <type> --value-type <type> --key <json>
 # View
 aptly view <function> --type-args <types> --args <json_args>
 ```
-
-## Releasing
-
-```bash
-cargo release <version> --execute
-```
-
-This bumps the version in all workspace crates, commits, tags, and pushes. The GitHub Actions workflow then builds binaries and creates a GitHub Release.
