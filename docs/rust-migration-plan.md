@@ -18,8 +18,6 @@
     - `decompile raw`
     - `decompile module <address> <module>`
     - `decompile address <address>`
-- `tx trace` is intentionally deferred for now.
-
 ## Scope
 
 ### In scope (v1 parity + near-term roadmap)
@@ -31,14 +29,12 @@
   - `account sends`
   - `address`
   - `tx balance-change`
-- Defer `tx trace` until after core migration stabilizes.
 - Add plugin architecture for optional `decompile` command, backed by Aptos
   `move-decompiler`:
   `https://github.com/aptos-labs/aptos-core/blob/main/third_party/move/tools/move-decompiler`.
 
 ### Out of scope (first cut)
 
-- Building a proprietary trace engine immediately (we keep Sentio provider first).
 - Redesigning command UX/output format unless needed for correctness.
 - Breaking changes to install/release UX (`install.sh`, binary name `aptly`).
 
@@ -71,7 +67,7 @@ aptly/
 
 1. **Parity-first wrappers**: move all plain REST wrapper commands quickly.
 2. **Value-add ports second**: port custom logic with golden test fixtures.
-3. **Plugin hooks third**: add extension points for decompile/trace backends.
+3. **Plugin hooks third**: add extension points for decompile backends.
 
 ### Feature-by-feature migration notes
 
@@ -103,11 +99,6 @@ aptly/
   - `fungible_asset::Withdraw/Deposit` events
   - transfer store owner/asset resolution from tx changes with fallback resource reads
 - Preserve `--aggregate` contract.
-
-#### `tx trace` (deferred)
-
-- Keep this out of immediate migration scope.
-- Revisit after command parity and release tooling are fully stabilized.
 
 ## Plugin plan (`decompile`)
 
@@ -151,18 +142,14 @@ The backend decompiler is Aptos `move-decompiler` from:
 - Add fixture-driven integration tests + snapshot outputs.
 - Add `tx encode` and `tx simulate` parity support.
 
-## Phase 3: Trace provider abstraction (deferred)
-
-- Deferred by product decision for now.
-
-## Phase 4: Decompile plugin (done)
+## Phase 3: Decompile plugin (done)
 
 - Add plugin discovery and dependency checks.
 - Implement first `decompile` adapter to Aptos `move-decompiler`
   (`aptos-core/third_party/move/tools/move-decompiler`).
 - Document install steps and failure diagnostics.
 
-## Phase 5: Cutover + deprecation (done)
+## Phase 4: Cutover + deprecation (done)
 
 - Publish Rust binary as `aptly`.
 - Remove Go code from this repository.
@@ -193,14 +180,10 @@ The backend decompiler is Aptos `move-decompiler` from:
   - Mitigation: snapshot tests + explicit compatibility matrix.
 - Optional plugin dependency complexity
   - Mitigation: plugin doctor checks and clear install docs.
-- External trace API instability
-  - Mitigation: provider abstraction + retries/timeouts + future in-house provider.
-
 ## Deliverables checklist
 
 - [x] Rust workspace with command parity baseline
 - [x] Ported value-add commands (`source-code`, `sends`, `address`, `balance-change`)
-- [ ] Trace provider abstraction + Sentio provider (deferred)
 - [x] Optional decompile plugin integration
 - [x] Updated release workflow and install path
 - [x] Migration guide and compatibility notes
@@ -209,5 +192,5 @@ The backend decompiler is Aptos `move-decompiler` from:
 
 1. **After Phase 1**: verify wrapper parity and shell/script compatibility.
 2. **After Phase 2**: verify value-add output parity against Go fixtures.
-3. **After Phase 4**: validate plugin UX before publicizing `decompile`.
+3. **After Phase 3**: validate plugin UX before publicizing `decompile`.
 4. **Before cutover**: run both CLIs in parallel for at least one release cycle.
