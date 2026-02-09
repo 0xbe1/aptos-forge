@@ -73,9 +73,9 @@ fn main() -> Result<()> {
 }
 
 fn print_version() {
-    let version = option_env!("APTLY_VERSION").unwrap_or(env!("CARGO_PKG_VERSION"));
-    let commit_sha = option_env!("APTLY_GIT_SHA").unwrap_or("unknown");
-    let build_date = option_env!("APTLY_BUILD_DATE").unwrap_or("unknown");
+    let version = env!("APTLY_VERSION");
+    let commit_sha = env!("APTLY_GIT_SHA");
+    let build_date = env!("APTLY_BUILD_DATE");
 
     println!("aptly {version}");
     println!("commit: {commit_sha}");
