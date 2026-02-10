@@ -63,7 +63,7 @@ fn main() -> Result<()> {
                 Command::Events(command) => run_events(&client, command)?,
                 Command::Table(command) => run_table(&client, command)?,
                 Command::View(command) => run_view(&client, command)?,
-                Command::Tx(command) => run_tx(&client, command)?,
+                Command::Tx(command) => run_tx(&client, &rpc_url, command)?,
                 Command::Plugin(_) | Command::Decompile(_) | Command::Version => unreachable!(),
             }
         }

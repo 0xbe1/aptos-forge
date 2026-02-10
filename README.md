@@ -79,6 +79,30 @@ export APTLY_MOVE_DECOMPILER_BIN=/path/to/move-decompiler
 
 Default wrapper output: `decompiled/<address>/`
 
+## Trace API (Sentio)
+
+`aptly tx trace` queries Sentio's hosted trace API at `https://app.sentio.xyz`.
+Network ID is auto-detected from the selected `--rpc-url` (for example, Aptos mainnet `1`
+or Movement mainnet `126`).
+Default hosted tracing is usually much faster. Try local mode only when your RPC is very fast
+(for example, a self-hosted node).
+
+```bash
+# Option 1: Sentio hosted API (default)
+aptly tx trace <tx_version_or_hash>
+
+# Option 2: local aptos-tracer binary
+aptly tx trace <tx_version_or_hash> --local-tracer
+
+# Optional: pin a specific local binary path
+aptly tx trace <tx_version_or_hash> --local-tracer /path/to/aptos-tracer
+```
+
+For `--local-tracer`, binary resolution order is:
+1. `--local-tracer /path/to/aptos-tracer` (if provided)
+2. `APTLY_APTOS_TRACER_BIN`
+3. `PATH` (`aptos-tracer`)
+
 ## Transaction Helpers
 
 ```bash
@@ -91,6 +115,9 @@ cat unsigned_tx.json | aptly tx encode
 
 # Simulate entry function payload from stdin (no private key required)
 cat payload.json | aptly tx simulate <sender>
+
+# Trace transaction call tree (Sentio API)
+aptly tx trace <version_or_hash>
 
 # Submit signed transaction JSON
 cat signed_tx.json | aptly tx submit

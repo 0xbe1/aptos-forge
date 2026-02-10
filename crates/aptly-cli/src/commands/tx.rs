@@ -1,17 +1,22 @@
 use anyhow::{anyhow, Context, Result};
 use aptly_aptos::AptosClient;
+use aptly_plugin::resolve_aptos_tracer_bin;
 use clap::{Args, Subcommand};
 use num_bigint::BigInt;
 use serde::Serialize;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::io::{self, IsTerminal, Read};
+use std::process::{Command, Stdio};
 use std::str::FromStr;
+use std::time::Duration;
 
 use crate::commands::common::{get_nested_string, parse_u64, value_to_string};
 
 const OBJECT_CORE_TYPE: &str = "0x1::object::ObjectCore";
 const FUNGIBLE_STORE_TYPE: &str = "0x1::fungible_asset::FungibleStore";
+const DEFAULT_TRACER_REQUEST_TIMEOUT: Duration = Duration::from_secs(300);
+const SENTIO_TRACE_BASE_URL: &str = "https://app.sentio.xyz";
 
 #[derive(Args)]
 pub(crate) struct TxCommand {
@@ -26,6 +31,7 @@ pub(crate) enum TxSubcommand {
     Encode,
     Simulate(TxSimulateArgs),
     Submit,
+    Trace(TxTraceArgs),
     #[command(name = "balance-change")]
     BalanceChange(TxBalanceChangeArgs),
 }
@@ -48,6 +54,16 @@ pub(crate) struct TxBalanceChangeArgs {
 #[derive(Args)]
 pub(crate) struct TxSimulateArgs {
     pub(crate) sender: String,
+}
+
+#[derive(Args)]
+pub(crate) struct TxTraceArgs {
+    pub(crate) version_or_hash: String,
+    /// Use a local aptos-tracer binary instead of Sentio hosted tracing.
+    /// The default hosted mode is usually faster; local mode helps when your
+    /// RPC is very fast (for example, your own node).
+    #[arg(long = "local-tracer", num_args = 0..=1, value_name = "TRACER_BIN")]
+    pub(crate) local_tracer: Option<Option<String>>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -73,7 +89,7 @@ struct TransferStoreMetadata {
     asset: String,
 }
 
-pub(crate) fn run_tx(client: &AptosClient, command: TxCommand) -> Result<()> {
+pub(crate) fn run_tx(client: &AptosClient, rpc_url: &str, command: TxCommand) -> Result<()> {
     match (command.command, command.version_or_hash) {
         (Some(TxSubcommand::List(args)), _) => {
             let mut path = format!("/transactions?limit={}", args.limit);
@@ -85,6 +101,7 @@ pub(crate) fn run_tx(client: &AptosClient, command: TxCommand) -> Result<()> {
         }
         (Some(TxSubcommand::Encode), _) => run_tx_encode(client),
         (Some(TxSubcommand::Simulate(args)), _) => run_tx_simulate(client, &args),
+        (Some(TxSubcommand::Trace(args)), _) => run_tx_trace(client, rpc_url, &args),
         (Some(TxSubcommand::Submit), _) => {
             let reader = io::stdin();
             let txn: Value = serde_json::from_reader(reader.lock())
@@ -201,6 +218,153 @@ fn normalize_simulation_payload(input: &Value) -> Result<Value> {
         "type_arguments": type_arguments,
         "arguments": arguments
     }))
+}
+
+fn run_tx_trace(client: &AptosClient, rpc_url: &str, args: &TxTraceArgs) -> Result<()> {
+    let tx_hash = resolve_trace_tx_hash(client, &args.version_or_hash)?;
+    let chain_id = resolve_trace_chain_id(client)?;
+    let trace_json = if let Some(local_tracer) = args.local_tracer.as_ref() {
+        run_local_trace_with_aptos_tracer(
+            rpc_url,
+            chain_id,
+            &tx_hash,
+            local_tracer.as_ref().map(String::as_str),
+        )?
+    } else {
+        fetch_trace_from_external_tracer(chain_id, &tx_hash)?
+    };
+    match serde_json::from_str::<Value>(&trace_json) {
+        Ok(value) => crate::print_pretty_json(&value),
+        Err(_) => {
+            // Deeply nested traces can exceed serde_json's recursion limit for `Value`.
+            // Fall back to raw JSON so tracing still succeeds.
+            println!("{trace_json}");
+            Ok(())
+        }
+    }
+}
+
+fn resolve_trace_tx_hash(client: &AptosClient, version_or_hash: &str) -> Result<String> {
+    let tx_ref = version_or_hash.trim();
+    if tx_ref.is_empty() {
+        return Err(anyhow!("missing transaction version/hash for trace"));
+    }
+
+    if tx_ref.parse::<u64>().is_ok() {
+        let tx = client
+            .get_json(&format!("/transactions/by_version/{tx_ref}"))
+            .context("failed to fetch transaction by version for trace")?;
+        let hash = tx
+            .get("hash")
+            .and_then(Value::as_str)
+            .ok_or_else(|| anyhow!("transaction response missing `hash` field"))?;
+        return Ok(strip_hex_prefix(hash).to_owned());
+    }
+
+    Ok(strip_hex_prefix(tx_ref).to_owned())
+}
+
+fn resolve_trace_chain_id(client: &AptosClient) -> Result<u16> {
+    let ledger = client
+        .get_json("/")
+        .context("failed to fetch ledger info for trace chain id")?;
+    let chain_id_u64 = parse_u64(ledger.get("chain_id").unwrap_or(&Value::Null))
+        .ok_or_else(|| anyhow!("failed to parse `chain_id` from ledger response"))?;
+
+    u16::try_from(chain_id_u64).context("ledger chain id does not fit in u16")
+}
+
+fn run_local_trace_with_aptos_tracer(
+    rpc_url: &str,
+    chain_id: u16,
+    tx_hash: &str,
+    explicit_tracer_bin: Option<&str>,
+) -> Result<String> {
+    let tracer_bin = resolve_aptos_tracer_bin(explicit_tracer_bin).map_err(|err| {
+        anyhow!(
+            "{err}\nHint: use `--local-tracer /path/to/aptos-tracer`, or set `APTLY_APTOS_TRACER_BIN`, or install `aptos-tracer` into PATH."
+        )
+    })?;
+    let mut command = Command::new(&tracer_bin);
+    let output = command
+        .arg("rest")
+        .arg(rpc_url.trim().to_owned())
+        .arg(tx_hash.to_owned())
+        .arg(chain_id.to_string())
+        .stdin(Stdio::null())
+        .output()
+        .with_context(|| format!("failed to execute aptos-tracer at {}", tracer_bin.display()))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let details = if !stderr.trim().is_empty() {
+            stderr.trim()
+        } else {
+            stdout.trim()
+        };
+        if details.is_empty() {
+            return Err(anyhow!("aptos-tracer exited with status {}", output.status));
+        }
+        return Err(anyhow!(
+            "aptos-tracer exited with status {}: {}",
+            output.status,
+            details
+        ));
+    }
+
+    let trace_json =
+        String::from_utf8(output.stdout).context("aptos-tracer returned non-UTF-8 output")?;
+    if trace_json.trim().is_empty() {
+        return Err(anyhow!("aptos-tracer returned empty trace output"));
+    }
+
+    Ok(trace_json)
+}
+
+fn fetch_trace_from_external_tracer(chain_id: u16, tx_hash: &str) -> Result<String> {
+    let sentio_url = build_sentio_call_trace_url(chain_id, tx_hash);
+    fetch_trace_from_url(&sentio_url)
+        .with_context(|| format!("failed to fetch trace from Sentio API `{}`", sentio_url))
+}
+
+fn fetch_trace_from_url(url: &str) -> Result<String> {
+    let http = reqwest::blocking::Client::builder()
+        .timeout(DEFAULT_TRACER_REQUEST_TIMEOUT)
+        .build()
+        .context("failed to build HTTP client for trace endpoint")?;
+
+    let response = http
+        .get(url)
+        .send()
+        .with_context(|| format!("request failed: GET {url}"))?;
+    let status = response.status();
+    let text = response
+        .text()
+        .context("failed to read trace endpoint response body")?;
+    if !status.is_success() {
+        return Err(anyhow!(
+            "trace API error (status {}): {}",
+            status.as_u16(),
+            text
+        ));
+    }
+
+    Ok(text)
+}
+
+fn build_sentio_call_trace_url(chain_id: u16, tx_hash: &str) -> String {
+    format!(
+        "{}/api/v1/move/call_trace?networkId={chain_id}&txHash={tx_hash}",
+        SENTIO_TRACE_BASE_URL
+    )
+}
+
+fn strip_hex_prefix(value: &str) -> &str {
+    value
+        .strip_prefix("0x")
+        .or_else(|| value.strip_prefix("0X"))
+        .unwrap_or(value)
 }
 
 fn run_tx_balance_change(client: &AptosClient, args: &TxBalanceChangeArgs) -> Result<()> {

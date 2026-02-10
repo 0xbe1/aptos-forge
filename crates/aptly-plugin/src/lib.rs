@@ -6,6 +6,8 @@ use std::process::{Command, Stdio};
 
 const MOVE_DECOMPILER_BIN: &str = "move-decompiler";
 const APTLY_MOVE_DECOMPILER_BIN: &str = "APTLY_MOVE_DECOMPILER_BIN";
+const APTOS_TRACER_BIN: &str = "aptos-tracer";
+const APTLY_APTOS_TRACER_BIN: &str = "APTLY_APTOS_TRACER_BIN";
 const APTOS_CORE_PATH: &str = "APTOS_CORE_PATH";
 
 #[derive(Debug, Clone, Serialize)]
@@ -160,6 +162,115 @@ pub fn move_decompiler_install_hint() -> String {
     .join("\n")
 }
 
+pub fn discover_aptos_tracer(explicit_bin: Option<&str>) -> PluginStatus {
+    let result = resolve_aptos_tracer(explicit_bin);
+    let installed = result
+        .path
+        .as_ref()
+        .map(|path| path.is_file())
+        .unwrap_or(false);
+
+    PluginStatus {
+        name: "aptos-tracer".to_owned(),
+        description: "Optional Aptos transaction tracer plugin backed by sentio aptos-core"
+            .to_owned(),
+        installed,
+        binary_path: result.path.map(|path| path.display().to_string()),
+        source: result.source,
+    }
+}
+
+pub fn doctor_aptos_tracer(explicit_bin: Option<&str>) -> PluginDoctorReport {
+    let plugin = discover_aptos_tracer(explicit_bin);
+    let mut checks = Vec::new();
+
+    checks.push(DoctorCheck {
+        name: "binary_discovered".to_owned(),
+        ok: plugin.installed,
+        message: if plugin.installed {
+            format!(
+                "Found aptos-tracer at {}",
+                plugin.binary_path.as_deref().unwrap_or_default()
+            )
+        } else {
+            "aptos-tracer binary not found".to_owned()
+        },
+    });
+
+    if let Some(path) = plugin.binary_path.as_deref() {
+        let executable = is_executable(path);
+        checks.push(DoctorCheck {
+            name: "binary_executable".to_owned(),
+            ok: executable,
+            message: if executable {
+                "Binary is executable".to_owned()
+            } else {
+                "Binary exists but is not executable".to_owned()
+            },
+        });
+
+        let runnable = Command::new(path)
+            .arg("--help")
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .map(|status| status.success())
+            .unwrap_or(false);
+        checks.push(DoctorCheck {
+            name: "binary_runnable".to_owned(),
+            ok: runnable,
+            message: if runnable {
+                "aptos-tracer responds to --help".to_owned()
+            } else {
+                "Failed to run aptos-tracer --help".to_owned()
+            },
+        });
+    }
+
+    let install_hint = if checks.iter().all(|check| check.ok) {
+        None
+    } else {
+        Some(aptos_tracer_install_hint())
+    };
+
+    PluginDoctorReport {
+        plugin,
+        checks,
+        install_hint,
+    }
+}
+
+pub fn resolve_aptos_tracer_bin(explicit_bin: Option<&str>) -> Result<PathBuf> {
+    let result = resolve_aptos_tracer(explicit_bin);
+    let path = result.path.ok_or_else(|| {
+        anyhow!(
+            "aptos-tracer plugin is not installed.\n{}",
+            aptos_tracer_install_hint()
+        )
+    })?;
+
+    if !path.is_file() {
+        return Err(anyhow!(
+            "aptos-tracer binary was resolved but does not exist: {}",
+            path.display()
+        ));
+    }
+
+    Ok(path)
+}
+
+pub fn aptos_tracer_install_hint() -> String {
+    [
+        "Install aptos-tracer from sentio aptos-core and point aptly to it:",
+        "  git clone --branch sentio/dev-2026-0210 https://github.com/sentioxyz/aptos-core.git",
+        "  cd aptos-core",
+        "  cargo build --locked --profile cli -p aptos-tracer",
+        "  export APTLY_APTOS_TRACER_BIN=$PWD/target/cli/aptos-tracer",
+        "or run `aptly tx trace <tx_version_or_hash> --local-tracer /path/to/aptos-tracer`",
+    ]
+    .join("\n")
+}
+
 fn resolve_move_decompiler(explicit_bin: Option<&str>) -> DiscoveryResult {
     if let Some(bin) = explicit_bin {
         if !bin.trim().is_empty() {
@@ -203,6 +314,38 @@ fn resolve_move_decompiler(explicit_bin: Option<&str>) -> DiscoveryResult {
                 source: Some(format!("env:{APTOS_CORE_PATH}")),
             };
         }
+    }
+
+    DiscoveryResult {
+        path: None,
+        source: None,
+    }
+}
+
+fn resolve_aptos_tracer(explicit_bin: Option<&str>) -> DiscoveryResult {
+    if let Some(bin) = explicit_bin {
+        if !bin.trim().is_empty() {
+            return DiscoveryResult {
+                path: Some(PathBuf::from(bin)),
+                source: Some("flag:--tracer-bin".to_owned()),
+            };
+        }
+    }
+
+    if let Ok(path) = env::var(APTLY_APTOS_TRACER_BIN) {
+        if !path.trim().is_empty() {
+            return DiscoveryResult {
+                path: Some(PathBuf::from(path)),
+                source: Some(format!("env:{APTLY_APTOS_TRACER_BIN}")),
+            };
+        }
+    }
+
+    if let Some(path) = find_in_path(APTOS_TRACER_BIN) {
+        return DiscoveryResult {
+            path: Some(path),
+            source: Some("PATH".to_owned()),
+        };
     }
 
     DiscoveryResult {
