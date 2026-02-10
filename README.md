@@ -79,6 +79,24 @@ export APTLY_MOVE_DECOMPILER_BIN=/path/to/move-decompiler
 
 Default wrapper output: `decompiled/<address>/`
 
+## Trace Plugin (`aptos-tracer`)
+
+`aptly tx trace` integrates with Sentio's `aptos-tracer` plugin.
+
+```bash
+# Trace by version or hash (auto-spawns local tracer server)
+aptly tx trace <tx_version_or_hash>
+
+# Reuse an existing tracer server
+aptly tx trace <tx_version_or_hash> --tracer-url http://127.0.0.1:9201
+```
+
+If `aptos-tracer` is not on `PATH`:
+
+```bash
+export APTLY_APTOS_TRACER_BIN=/path/to/aptos-tracer
+```
+
 ## Transaction Helpers
 
 ```bash
@@ -91,6 +109,9 @@ cat unsigned_tx.json | aptly tx encode
 
 # Simulate entry function payload from stdin (no private key required)
 cat payload.json | aptly tx simulate <sender>
+
+# Trace transaction call tree (aptos-tracer plugin)
+aptly tx trace <version_or_hash>
 
 # Submit signed transaction JSON
 cat signed_tx.json | aptly tx submit

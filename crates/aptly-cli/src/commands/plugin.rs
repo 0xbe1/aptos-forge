@@ -1,5 +1,7 @@
 use anyhow::{anyhow, Result};
-use aptly_plugin::{discover_move_decompiler, doctor_move_decompiler};
+use aptly_plugin::{
+    discover_aptos_tracer, discover_move_decompiler, doctor_aptos_tracer, doctor_move_decompiler,
+};
 use clap::{Args, Subcommand};
 
 #[derive(Args)]
@@ -18,18 +20,23 @@ pub(crate) enum PluginSubcommand {
 pub(crate) struct PluginDoctorArgs {
     #[arg(long = "decompiler-bin")]
     pub(crate) decompiler_bin: Option<String>,
+    #[arg(long = "tracer-bin")]
+    pub(crate) tracer_bin: Option<String>,
 }
 
 pub(crate) fn run_plugin(command: PluginCommand) -> Result<()> {
     match command.command {
         PluginSubcommand::List => {
-            let plugins = vec![discover_move_decompiler(None)];
+            let plugins = vec![discover_move_decompiler(None), discover_aptos_tracer(None)];
             crate::print_serialized(&plugins)
         }
         PluginSubcommand::Doctor(args) => {
-            let report = doctor_move_decompiler(args.decompiler_bin.as_deref());
-            let ok = report.all_ok();
-            crate::print_serialized(&report)?;
+            let reports = vec![
+                doctor_move_decompiler(args.decompiler_bin.as_deref()),
+                doctor_aptos_tracer(args.tracer_bin.as_deref()),
+            ];
+            let ok = reports.iter().all(|report| report.all_ok());
+            crate::print_serialized(&reports)?;
             if ok {
                 Ok(())
             } else {
