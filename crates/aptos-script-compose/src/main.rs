@@ -28,8 +28,8 @@ const DEFAULT_RPC_URL: &str = "https://rpc.sentio.xyz/aptos/v1";
 struct Cli {
     #[arg(long, default_value = DEFAULT_RPC_URL)]
     rpc_url: String,
-    #[arg(long, default_value_t = false)]
-    no_metadata: bool,
+    #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
+    with_metadata: bool,
     #[arg(long, default_value_t = false)]
     emit_script_payload: bool,
 }
@@ -304,7 +304,7 @@ fn run(cli: Cli) -> Result<()> {
     }
 
     let script_bytes = composer
-        .generate_batched_calls(!cli.no_metadata)
+        .generate_batched_calls(cli.with_metadata)
         .map_err(|err| anyhow!("failed to generate batched script: {err}"))?;
 
     if cli.emit_script_payload {
