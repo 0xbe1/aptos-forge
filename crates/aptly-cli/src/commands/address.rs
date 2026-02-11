@@ -8,6 +8,7 @@ const LABELS_URL: &str =
 
 #[derive(Args)]
 pub(crate) struct AddressCommand {
+    /// Case-insensitive substring to match against known labels.
     pub(crate) query: String,
 }
 

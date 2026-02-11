@@ -15,48 +15,67 @@ pub(crate) struct DecompileCommand {
 
 #[derive(Subcommand)]
 pub(crate) enum DecompileSubcommand {
+    #[command(about = "Run move-decompiler directly with raw arguments")]
     Raw(DecompileRawArgs),
+    #[command(about = "Decompile a single module at an address")]
     Module(DecompileModuleArgs),
+    #[command(about = "Decompile all or selected modules for an address")]
     Address(DecompileAddressArgs),
 }
 
 #[derive(Args)]
 pub(crate) struct DecompileRawArgs {
+    /// Explicit move-decompiler binary path.
     #[arg(long = "decompiler-bin")]
     pub(crate) decompiler_bin: Option<String>,
+    /// Arguments passed through to move-decompiler.
     #[arg(trailing_var_arg = true, allow_hyphen_values = true, num_args = 0..)]
     pub(crate) args: Vec<String>,
 }
 
 #[derive(Args)]
 pub(crate) struct DecompileModuleArgs {
+    /// Account address (`0x...`).
     pub(crate) address: String,
+    /// Module name.
     pub(crate) module: String,
+    /// Explicit move-decompiler binary path.
     #[arg(long = "decompiler-bin")]
     pub(crate) decompiler_bin: Option<String>,
+    /// Output directory for decompiled sources.
     #[arg(long)]
     pub(crate) out_dir: Option<PathBuf>,
+    /// Keep intermediate `.mv` bytecode files.
     #[arg(long, default_value_t = false)]
     pub(crate) keep_bytecode: bool,
+    /// Output file extension for decompiled files.
     #[arg(long = "ending", default_value = "move")]
     pub(crate) ending: String,
+    /// Additional move-decompiler argument (repeatable).
     #[arg(long = "decompiler-arg")]
     pub(crate) decompiler_args: Vec<String>,
 }
 
 #[derive(Args)]
 pub(crate) struct DecompileAddressArgs {
+    /// Account address (`0x...`).
     pub(crate) address: String,
+    /// Module name filter (repeatable). If omitted, decompile all modules.
     #[arg(long = "module")]
     pub(crate) modules: Vec<String>,
+    /// Explicit move-decompiler binary path.
     #[arg(long = "decompiler-bin")]
     pub(crate) decompiler_bin: Option<String>,
+    /// Output directory for decompiled sources.
     #[arg(long)]
     pub(crate) out_dir: Option<PathBuf>,
+    /// Keep intermediate `.mv` bytecode files.
     #[arg(long, default_value_t = false)]
     pub(crate) keep_bytecode: bool,
+    /// Output file extension for decompiled files.
     #[arg(long = "ending", default_value = "move")]
     pub(crate) ending: String,
+    /// Additional move-decompiler argument (repeatable).
     #[arg(long = "decompiler-arg")]
     pub(crate) decompiler_args: Vec<String>,
 }

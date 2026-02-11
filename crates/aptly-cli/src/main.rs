@@ -24,6 +24,7 @@ const DEFAULT_RPC_URL: &str = "https://rpc.sentio.xyz/aptos/v1";
 #[command(name = "aptly")]
 #[command(about = "Aptos CLI utilities in Rust")]
 struct Cli {
+    /// Aptos node REST API endpoint.
     #[arg(long, global = true, default_value = DEFAULT_RPC_URL)]
     rpc_url: String,
 
@@ -33,16 +34,27 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
+    #[command(about = "Node and ledger endpoints")]
     Node(NodeCommand),
+    #[command(about = "Account resources, modules, balances, and transactions")]
     Account(AccountCommand),
+    #[command(about = "Resolve known protocol labels to addresses")]
     Address(AddressCommand),
+    #[command(about = "Inspect optional external plugins")]
     Plugin(PluginCommand),
+    #[command(about = "Decompile Move bytecode when source is unavailable")]
     Decompile(DecompileCommand),
+    #[command(about = "Fetch blocks by height or version")]
     Block(BlockCommand),
+    #[command(about = "Read events by account creation number")]
     Events(EventsCommand),
+    #[command(about = "Read Move table items")]
     Table(TableCommand),
+    #[command(about = "Execute view functions")]
     View(ViewCommand),
+    #[command(about = "Inspect, encode, submit, simulate, and trace transactions")]
     Tx(TxCommand),
+    #[command(about = "Print build version information")]
     Version,
 }
 

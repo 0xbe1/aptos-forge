@@ -10,11 +10,15 @@ pub(crate) struct NodeCommand {
 
 #[derive(Subcommand)]
 pub(crate) enum NodeSubcommand {
+    #[command(about = "Get ledger info from `/`")]
     Ledger,
+    #[command(about = "Get OpenAPI spec JSON")]
     Spec,
+    #[command(about = "Check node health")]
     Health,
+    #[command(about = "Get node build/runtime info")]
     Info,
-    #[command(name = "estimate-gas-price")]
+    #[command(name = "estimate-gas-price", about = "Estimate current gas price")]
     EstimateGasPrice,
 }
 

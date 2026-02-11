@@ -13,16 +13,21 @@ pub(crate) struct PluginCommand {
 
 #[derive(Subcommand)]
 pub(crate) enum PluginSubcommand {
+    #[command(about = "List discovered plugin binaries and metadata")]
     List,
+    #[command(about = "Run health checks for plugin binaries")]
     Doctor(PluginDoctorArgs),
 }
 
 #[derive(Args)]
 pub(crate) struct PluginDoctorArgs {
+    /// Explicit move-decompiler binary path.
     #[arg(long = "decompiler-bin")]
     pub(crate) decompiler_bin: Option<String>,
+    /// Explicit aptos-tracer binary path.
     #[arg(long = "tracer-bin")]
     pub(crate) tracer_bin: Option<String>,
+    /// Explicit aptos-script-compose binary path.
     #[arg(long = "script-compose-bin")]
     pub(crate) script_compose_bin: Option<String>,
 }

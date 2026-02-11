@@ -22,42 +22,59 @@ const SENTIO_TRACE_BASE_URL: &str = "https://app.sentio.xyz";
 pub(crate) struct TxCommand {
     #[command(subcommand)]
     pub(crate) command: Option<TxSubcommand>,
+    /// Transaction version (u64) or hash (0x...).
+    /// Used when no subcommand is provided.
     pub(crate) version_or_hash: Option<String>,
 }
 
 #[derive(Subcommand)]
 pub(crate) enum TxSubcommand {
+    #[command(about = "List transactions from node API")]
     List(TxListArgs),
+    #[command(about = "Encode an unsigned transaction JSON from stdin")]
     Encode,
+    #[command(about = "Simulate an entry function payload JSON from stdin")]
     Simulate(TxSimulateArgs),
+    #[command(about = "Submit a signed transaction JSON from stdin")]
     Submit,
+    #[command(about = "Fetch and print transaction call trace")]
     Trace(TxTraceArgs),
-    #[command(name = "balance-change")]
+    #[command(
+        name = "balance-change",
+        about = "Summarize fungible asset balance changes for a transaction"
+    )]
     BalanceChange(TxBalanceChangeArgs),
 }
 
 #[derive(Args)]
 pub(crate) struct TxListArgs {
+    /// Maximum number of transactions to return.
     #[arg(long, default_value_t = 25)]
     pub(crate) limit: u64,
+    /// Start cursor (ledger version offset).
     #[arg(long, default_value_t = 0)]
     pub(crate) start: u64,
 }
 
 #[derive(Args)]
 pub(crate) struct TxBalanceChangeArgs {
+    /// Transaction version (u64) or hash (0x...).
+    /// If omitted, reads full transaction JSON from stdin.
     pub(crate) version_or_hash: Option<String>,
+    /// Aggregate deltas by `(account, asset)` pair.
     #[arg(long, default_value_t = false)]
     pub(crate) aggregate: bool,
 }
 
 #[derive(Args)]
 pub(crate) struct TxSimulateArgs {
+    /// Sender account address used to resolve sequence number.
     pub(crate) sender: String,
 }
 
 #[derive(Args)]
 pub(crate) struct TxTraceArgs {
+    /// Transaction version (u64) or hash (0x...).
     pub(crate) version_or_hash: String,
     /// Use a local aptos-tracer binary instead of Sentio hosted tracing.
     /// The default hosted mode is usually faster; local mode helps when your

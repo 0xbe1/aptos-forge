@@ -18,17 +18,25 @@ const FUNGIBLE_METADATA_TYPE: &str = "0x1::fungible_asset::Metadata";
 pub(crate) struct AccountCommand {
     #[command(subcommand)]
     pub(crate) command: Option<AccountSubcommand>,
+    /// Account address when no subcommand is provided.
     pub(crate) address: Option<String>,
 }
 
 #[derive(Subcommand)]
 pub(crate) enum AccountSubcommand {
+    #[command(about = "List all resources for an account")]
     Resources(AddressArg),
+    #[command(about = "Read a specific resource by type")]
     Resource(ResourceArgs),
+    #[command(about = "List all modules published under an account")]
     Modules(AddressArg),
+    #[command(about = "Read a module, its ABI, or raw bytecode")]
     Module(ModuleArgs),
+    #[command(about = "Read fungible asset balance for an account")]
     Balance(BalanceArgs),
+    #[command(about = "List account transactions")]
     Txs(TxsArgs),
+    #[command(about = "Summarize outgoing transfers from account transactions")]
     Sends(SendsArgs),
     #[command(
         name = "source-code",
@@ -39,55 +47,74 @@ pub(crate) enum AccountSubcommand {
 
 #[derive(Args)]
 pub(crate) struct AddressArg {
+    /// Account address (`0x...`).
     pub(crate) address: String,
 }
 
 #[derive(Args)]
 pub(crate) struct ResourceArgs {
+    /// Account address (`0x...`).
     pub(crate) address: String,
+    /// Fully-qualified Move resource type.
     pub(crate) resource_type: String,
 }
 
 #[derive(Args)]
 pub(crate) struct ModuleArgs {
+    /// Account address (`0x...`).
     pub(crate) address: String,
+    /// Module name.
     pub(crate) module_name: String,
+    /// Print only ABI from module response.
     #[arg(long)]
     pub(crate) abi: bool,
+    /// Print only bytecode from module response.
     #[arg(long)]
     pub(crate) bytecode: bool,
 }
 
 #[derive(Args)]
 pub(crate) struct BalanceArgs {
+    /// Account address (`0x...`).
     pub(crate) address: String,
+    /// Optional asset type tag; defaults to AptosCoin.
     pub(crate) asset_type: Option<String>,
 }
 
 #[derive(Args)]
 pub(crate) struct TxsArgs {
+    /// Account address (`0x...`).
     pub(crate) address: String,
+    /// Maximum number of transactions to return.
     #[arg(long, default_value_t = 25)]
     pub(crate) limit: u64,
+    /// Start cursor (ledger version offset).
     #[arg(long, default_value_t = 0)]
     pub(crate) start: u64,
 }
 
 #[derive(Args)]
 pub(crate) struct SendsArgs {
+    /// Account address (`0x...`).
     pub(crate) address: String,
+    /// Maximum number of transactions to scan.
     #[arg(long, default_value_t = 25)]
     pub(crate) limit: u64,
+    /// Render human-friendly decimal amounts and symbols.
     #[arg(long, default_value_t = false)]
     pub(crate) pretty: bool,
 }
 
 #[derive(Args)]
 pub(crate) struct SourceCodeArgs {
+    /// Account address (`0x...`).
     pub(crate) address: String,
+    /// Optional module name filter.
     pub(crate) module_name: Option<String>,
+    /// Optional package name filter.
     #[arg(long = "package")]
     pub(crate) package_name: Option<String>,
+    /// Print raw package/module/source JSON.
     #[arg(long, default_value_t = false)]
     pub(crate) raw: bool,
 }

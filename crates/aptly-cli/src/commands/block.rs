@@ -6,20 +6,24 @@ use clap::{Args, Subcommand};
 pub(crate) struct BlockCommand {
     #[command(subcommand)]
     pub(crate) command: Option<BlockSubcommand>,
+    /// Block height used when no subcommand is provided.
     pub(crate) height: Option<String>,
+    /// Include full transaction payloads in block response.
     #[arg(long, default_value_t = false)]
     pub(crate) with_transactions: bool,
 }
 
 #[derive(Subcommand)]
 pub(crate) enum BlockSubcommand {
-    #[command(name = "by-version")]
+    #[command(name = "by-version", about = "Fetch block by ledger version")]
     ByVersion(ByVersionArgs),
 }
 
 #[derive(Args)]
 pub(crate) struct ByVersionArgs {
+    /// Ledger version to resolve containing block.
     pub(crate) version: String,
+    /// Include full transaction payloads in block response.
     #[arg(long, default_value_t = false)]
     pub(crate) with_transactions: bool,
 }

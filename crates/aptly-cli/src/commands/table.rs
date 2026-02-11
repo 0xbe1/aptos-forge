@@ -11,16 +11,21 @@ pub(crate) struct TableCommand {
 
 #[derive(Subcommand)]
 pub(crate) enum TableSubcommand {
+    #[command(about = "Read a table item by key")]
     Item(TableItemArgs),
 }
 
 #[derive(Args)]
 pub(crate) struct TableItemArgs {
+    /// On-chain table handle (`0x...`).
     pub(crate) table_handle: String,
+    /// Move type tag for the table key.
     #[arg(long)]
     pub(crate) key_type: String,
+    /// Move type tag for the table value.
     #[arg(long)]
     pub(crate) value_type: String,
+    /// JSON-encoded key value.
     #[arg(long)]
     pub(crate) key: String,
 }

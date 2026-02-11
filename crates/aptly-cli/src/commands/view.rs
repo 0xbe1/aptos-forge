@@ -5,9 +5,12 @@ use serde_json::{json, Value};
 
 #[derive(Args)]
 pub(crate) struct ViewCommand {
+    /// Fully-qualified Move function, e.g. `0x1::coin::balance`.
     pub(crate) function: String,
+    /// Repeatable type arguments.
     #[arg(long = "type-args")]
     pub(crate) type_args: Vec<String>,
+    /// Repeatable JSON arguments.
     #[arg(long = "args")]
     pub(crate) args: Vec<String>,
 }
