@@ -32,7 +32,8 @@ if [ -z "$TAG" ]; then
     exit 1
 fi
 
-VERSION="${TAG#aptly-cli-}"
+# Release assets for aptly include the full tag string.
+VERSION="$TAG"
 
 echo "Installing $BINARY ${VERSION} (${TAG}) for ${OS}/${ARCH}..."
 
@@ -40,7 +41,7 @@ echo "Installing $BINARY ${VERSION} (${TAG}) for ${OS}/${ARCH}..."
 ARCHIVE="${BINARY}_${VERSION}_${OS}_${ARCH}.tar.gz"
 URL="https://github.com/$REPO/releases/download/$TAG/$ARCHIVE"
 
-curl -sL "$URL" | tar xz
+curl -fsSL "$URL" | tar xz
 
 # Install
 if [ -w "$INSTALL_DIR" ]; then
