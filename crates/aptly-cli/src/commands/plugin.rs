@@ -1,8 +1,8 @@
-use anyhow::{anyhow, Result};
-use aptly_plugin::{
+use crate::plugin_tools::{
     discover_aptos_script_compose, discover_aptos_tracer, discover_move_decompiler,
     doctor_aptos_script_compose, doctor_aptos_tracer, doctor_move_decompiler,
 };
+use anyhow::{anyhow, Result};
 use clap::{Args, Subcommand};
 
 #[derive(Args)]

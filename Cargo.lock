@@ -106,7 +106,6 @@ version = "0.2.0"
 dependencies = [
  "anyhow",
  "aptly-aptos",
- "aptly-plugin",
  "clap",
  "flate2",
  "hex",
@@ -116,14 +115,6 @@ dependencies = [
  "serde_json",
  "tempfile",
  "urlencoding",
-]
-
-[[package]]
-name = "aptly-plugin"
-version = "0.2.0"
-dependencies = [
- "anyhow",
- "serde",
 ]
 
 [[package]]

@@ -347,25 +347,6 @@ pub fn doctor_aptos_script_compose(explicit_bin: Option<&str>) -> PluginDoctorRe
     }
 }
 
-pub fn resolve_aptos_script_compose_bin(explicit_bin: Option<&str>) -> Result<PathBuf> {
-    let result = resolve_aptos_script_compose(explicit_bin);
-    let path = result.path.ok_or_else(|| {
-        anyhow!(
-            "aptos-script-compose plugin is not installed.\n{}",
-            aptos_script_compose_install_hint()
-        )
-    })?;
-
-    if !path.is_file() {
-        return Err(anyhow!(
-            "aptos-script-compose binary was resolved but does not exist: {}",
-            path.display()
-        ));
-    }
-
-    Ok(path)
-}
-
 pub fn aptos_script_compose_install_hint() -> String {
     [
         "Install aptos-script-compose from aptly and put it on PATH (or pass --script-compose-bin):",

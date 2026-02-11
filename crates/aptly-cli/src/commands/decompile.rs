@@ -1,6 +1,6 @@
+use crate::plugin_tools::run_move_decompiler;
 use anyhow::{anyhow, Context, Result};
 use aptly_aptos::AptosClient;
-use aptly_plugin::run_move_decompiler;
 use clap::{Args, Subcommand};
 use serde_json::Value;
 use std::fs;

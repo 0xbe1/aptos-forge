@@ -5,6 +5,7 @@ use serde::Serialize;
 use serde_json::Value;
 
 mod commands;
+mod plugin_tools;
 
 use commands::account::{run_account, AccountCommand};
 use commands::address::{run_address, AddressCommand};

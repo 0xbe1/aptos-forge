@@ -1,6 +1,6 @@
+use crate::plugin_tools::resolve_aptos_tracer_bin;
 use anyhow::{anyhow, Context, Result};
 use aptly_aptos::AptosClient;
-use aptly_plugin::resolve_aptos_tracer_bin;
 use clap::{Args, Subcommand};
 use num_bigint::BigInt;
 use serde::Serialize;
