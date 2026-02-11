@@ -10,6 +10,10 @@ resolver = "2"
 edition = "2021"
 license = "MIT"
 
+[workspace.metadata.release]
+pre-release-commit-message = "chore: Release {{crate_name}} v{{version}}"
+tag-message = "chore: Release {{crate_name}} v{{version}}"
+
 [workspace.dependencies]
 anyhow = "1.0"
 clap = { version = "4.5", features = ["derive"] }
