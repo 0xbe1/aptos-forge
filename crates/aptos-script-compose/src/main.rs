@@ -34,12 +34,6 @@ struct Cli {
     emit_script_payload: bool,
 }
 
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct ComposePayload {
-    steps: Vec<StepInput>,
-}
-
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct StepInput {
@@ -196,8 +190,8 @@ fn main() -> Result<()> {
 }
 
 fn run(cli: Cli) -> Result<()> {
-    let payload = read_payload_from_stdin()?;
-    let steps = resolve_steps(payload)?;
+    let payload_steps = read_payload_from_stdin()?;
+    let steps = resolve_steps(payload_steps)?;
     let required_modules = collect_required_modules(&steps)?;
 
     let client = AptosClient::new(&cli.rpc_url)?;
@@ -344,21 +338,30 @@ fn run(cli: Cli) -> Result<()> {
     Ok(())
 }
 
-fn read_payload_from_stdin() -> Result<ComposePayload> {
+fn read_payload_from_stdin() -> Result<Vec<StepInput>> {
     let stdin = io::stdin();
-    serde_json::from_reader(stdin.lock())
-        .context("failed to parse script compose payload JSON from stdin")
+    let raw: Value = serde_json::from_reader(stdin.lock())
+        .context("failed to parse script compose payload JSON from stdin")?;
+    parse_steps_payload(raw)
 }
 
-fn resolve_steps(payload: ComposePayload) -> Result<Vec<ResolvedStep>> {
-    if payload.steps.is_empty() {
+fn parse_steps_payload(raw: Value) -> Result<Vec<StepInput>> {
+    match raw {
+        Value::Array(_) => serde_json::from_value::<Vec<StepInput>>(raw)
+            .context("failed to parse script compose payload as step array"),
+        _ => bail!("invalid payload shape: expected top-level step array `[...]`"),
+    }
+}
+
+fn resolve_steps(payload_steps: Vec<StepInput>) -> Result<Vec<ResolvedStep>> {
+    if payload_steps.is_empty() {
         bail!("payload must include at least one step");
     }
 
-    let mut resolved = Vec::with_capacity(payload.steps.len());
+    let mut resolved = Vec::with_capacity(payload_steps.len());
     let mut labels: HashMap<String, usize> = HashMap::new();
 
-    for (index, step) in payload.steps.into_iter().enumerate() {
+    for (index, step) in payload_steps.into_iter().enumerate() {
         let label = step.label.trim().to_owned();
         if label.is_empty() {
             bail!("step at index {index} has an empty label");
@@ -789,37 +792,51 @@ mod tests {
           "steps": []
         }
         "#;
-        assert!(serde_json::from_str::<ComposePayload>(json).is_err());
+        let raw: Value = serde_json::from_str(json).unwrap();
+        assert!(parse_steps_payload(raw).is_err());
     }
 
     #[test]
-    fn parses_type_arguments_alias() {
+    fn parses_direct_steps_array_with_type_arguments_alias() {
+        let json = r#"
+        [{
+            "label": "s1",
+            "function": "0x1::coin::withdraw",
+            "type_arguments": ["0x1::aptos_coin::AptosCoin"],
+            "args": [{"kind":"signer"}, {"kind":"literal","value":"1"}]
+        }]
+        "#;
+        let raw: Value = serde_json::from_str(json).unwrap();
+        let steps = parse_steps_payload(raw).unwrap();
+        assert_eq!(steps[0].type_arguments.len(), 1);
+    }
+
+    #[test]
+    fn rejects_legacy_steps_object() {
         let json = r#"
         {
           "steps": [{
             "label": "s1",
             "function": "0x1::coin::withdraw",
-            "type_arguments": ["0x1::aptos_coin::AptosCoin"],
             "args": [{"kind":"signer"}, {"kind":"literal","value":"1"}]
           }]
         }
         "#;
-        let payload: ComposePayload = serde_json::from_str(json).unwrap();
-        assert_eq!(payload.steps[0].type_arguments.len(), 1);
+        let raw: Value = serde_json::from_str(json).unwrap();
+        assert!(parse_steps_payload(raw).is_err());
     }
 
     #[test]
     fn rejects_unknown_fields_in_args() {
         let json = r#"
-        {
-          "steps": [{
+        [{
             "label": "s1",
             "function": "0x1::coin::withdraw",
             "args": [{"kind":"signer","foo":1}]
-          }]
-        }
+        }]
         "#;
-        assert!(serde_json::from_str::<ComposePayload>(json).is_err());
+        let raw: Value = serde_json::from_str(json).unwrap();
+        assert!(parse_steps_payload(raw).is_err());
     }
 
     #[test]

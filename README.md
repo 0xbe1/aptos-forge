@@ -177,7 +177,6 @@ aptly tx balance-change [version_or_hash] [--aggregate]
 
 ## TODOs
 
-- [ ] aptos-script-compose should skip the top layer "steps"
 - [ ] add tx compose subcommand
 - [ ] decompile to stdout
 - [ ] decompile args should be identical to source-code args
