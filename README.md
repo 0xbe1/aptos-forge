@@ -89,6 +89,36 @@ Binary resolution order for `aptly decompile` is:
 
 Default wrapper output: `decompiled/<address>/`
 
+## Script Compose Plugin (`aptos-script-compose`)
+
+`aptly` can discover `aptos-script-compose` as an external plugin binary.
+The binary wraps Aptos `script-composer` and compiles batched call payload JSON from stdin.
+
+```bash
+# Check plugin installation
+aptly plugin list
+aptly plugin doctor --script-compose-bin /path/to/aptos-script-compose
+
+# Compose batched script payload from stdin and print raw 0x-hex serialized Script bytes
+cat compose_payload.json | aptos-script-compose --rpc-url https://rpc.sentio.xyz/aptos/v1
+
+# Emit a JSON payload directly consumable by aptly tx simulate / submit
+cat compose_payload.json \
+  | aptos-script-compose --rpc-url https://rpc.sentio.xyz/aptos/v1 --emit-script-payload \
+  | aptly tx simulate <sender>
+```
+
+If `aptos-script-compose` is not on `PATH`:
+
+```bash
+export APTLY_APTOS_SCRIPT_COMPOSE_BIN=/path/to/aptos-script-compose
+```
+
+Binary resolution order for `aptos-script-compose` plugin checks:
+1. `--script-compose-bin /path/to/aptos-script-compose` (for `aptly plugin doctor`)
+2. `APTLY_APTOS_SCRIPT_COMPOSE_BIN`
+3. `PATH` (`aptos-script-compose`)
+
 ## Trace API (Sentio)
 
 `aptly tx trace` queries Sentio's hosted trace API at `https://app.sentio.xyz`.

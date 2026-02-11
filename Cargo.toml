@@ -3,6 +3,7 @@ members = [
     "crates/aptly-aptos",
     "crates/aptly-cli",
     "crates/aptly-plugin",
+    "crates/aptos-script-compose",
 ]
 resolver = "2"
 

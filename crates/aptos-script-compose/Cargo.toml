@@ -1,0 +1,23 @@
+[package]
+name = "aptos-script-compose"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Aptly plugin binary wrapper around Aptos script composer"
+repository = "https://github.com/0xbe1/aptly"
+
+[[bin]]
+name = "aptos-script-compose"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+hex.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+urlencoding.workspace = true
+bcs = { git = "https://github.com/aptos-labs/bcs.git", rev = "d31fab9d81748e2594be5cd5cdf845786a30562d" }
+aptly-aptos = { path = "../aptly-aptos", version = "0.2.0" }
+aptos-dynamic-transaction-composer = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "095b361b29f74d0f30b5d0a8852af2becefed92c", package = "aptos-dynamic-transaction-composer" }
+move-core-types = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "095b361b29f74d0f30b5d0a8852af2becefed92c", package = "move-core-types" }

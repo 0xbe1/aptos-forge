@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Result};
 use aptly_plugin::{
-    discover_aptos_tracer, discover_move_decompiler, doctor_aptos_tracer, doctor_move_decompiler,
+    discover_aptos_script_compose, discover_aptos_tracer, discover_move_decompiler,
+    doctor_aptos_script_compose, doctor_aptos_tracer, doctor_move_decompiler,
 };
 use clap::{Args, Subcommand};
 
@@ -22,18 +23,25 @@ pub(crate) struct PluginDoctorArgs {
     pub(crate) decompiler_bin: Option<String>,
     #[arg(long = "tracer-bin")]
     pub(crate) tracer_bin: Option<String>,
+    #[arg(long = "script-compose-bin")]
+    pub(crate) script_compose_bin: Option<String>,
 }
 
 pub(crate) fn run_plugin(command: PluginCommand) -> Result<()> {
     match command.command {
         PluginSubcommand::List => {
-            let plugins = vec![discover_move_decompiler(None), discover_aptos_tracer(None)];
+            let plugins = vec![
+                discover_move_decompiler(None),
+                discover_aptos_tracer(None),
+                discover_aptos_script_compose(None),
+            ];
             crate::print_serialized(&plugins)
         }
         PluginSubcommand::Doctor(args) => {
             let reports = vec![
                 doctor_move_decompiler(args.decompiler_bin.as_deref()),
                 doctor_aptos_tracer(args.tracer_bin.as_deref()),
+                doctor_aptos_script_compose(args.script_compose_bin.as_deref()),
             ];
             let ok = reports.iter().all(|report| report.all_ok());
             crate::print_serialized(&reports)?;
