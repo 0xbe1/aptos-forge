@@ -18,9 +18,10 @@ aptly node ledger
 aptly --rpc-url https://rpc.sentio.xyz/aptos/v1 node ledger
 ```
 
-## Fun Commands
+## Highlighted Commands
 
 ```bash
+# Resolve known protocol labels to on-chain addresses
 $ aptly address thala
 {
   "0x007730cd28ee1cdc9e999336cbc430f99e7c44397c0aa77516f6f23a78559bb5": "ThalaSwap v2",
@@ -33,6 +34,7 @@ $ aptly address thala
   "0xfaf4e633ae9eb31366c9ca24214231760926576c7b625313b3688b5e900731f6": "Thala LSD"
 }
 
+# Read published source metadata when available
 $ aptly account source-code 0x1 chain_id --raw | head -n 20
 /// The chain id distinguishes between different chains (e.g., testnet and the main network).
 /// One important role is to prevent transactions intended for one chain from being executed on another.
@@ -55,25 +57,12 @@ module aptos_framework::chain_id {
 
     #[view]
 
-$ aptly decompile module 0x1 chain_id && cat decompiled/0x1/chain_id.move
-module 0x1::chain_id {
-    use 0x1::system_addresses;
-    friend 0x1::genesis;
-    struct ChainId has key {
-        id: u8,
-    }
-    public fun get(): u8
-        acquires ChainId
-    {
-        *&borrow_global<ChainId>(@0x1).id
-    }
-    friend fun initialize(p0: &signer, p1: u8) {
-        system_addresses::assert_aptos_framework(p0);
-        let _v0 = ChainId{id: p1};
-        move_to<ChainId>(p0, _v0);
-    }
-}
+# If source metadata is missing, decompile module bytecode instead
+$ aptly decompile address 0x8b4a2c4bb53857c718a04c020b98f8c2e1f99a68b0f57389a8bf5434cd22e05c --module pool_v3 && grep "fun add_liquiditiy" decompiled/0x8b4a2c4bb53857c718a04c020b98f8c2e1f99a68b0f57389a8bf5434cd22e05c/pool_v3.move
+public fun add_liquidity(p0: &signer, p1: object::Object<position_v3::Info>, p2: u128, p3: fungible_asset::FungibleAsset, p4: fungible_asset::FungibleAsset): (u64, u64, fungible_asset::FungibleAsset, fungible_asset::FungibleAsset) {
+friend fun add_liquidity_v2(p0: &signer, p1: object::Object<position_v3::Info>, p2: u128, p3: fungible_asset::FungibleAsset, p4: fungible_asset::FungibleAsset): (u64, u64, fungible_asset::FungibleAsset, fungible_asset::FungibleAsset)
 
+# Summarize asset deltas in a transaction
 $ aptly tx balance-change 4300326632 --aggregate
 [
   {
@@ -103,6 +92,7 @@ $ aptly tx balance-change 4300326632 --aggregate
   }
 ]
 
+# Inspect the transaction call tree
 $ aptly tx trace 0xf44b2ea4a0cd55a31559fc022a2fba12aa81c46dcfce31a050d9d42d93a7dae5 | jq -r '
     def show($d):
       (("  " * $d) + (.contractName + "::" + .functionName)),
@@ -142,7 +132,7 @@ primary_fungible_store::primary_fungible_store::transfer
     dispatchable_fungible_asset::usdt::deposit
 ```
 
-## Boring Commands
+## Other Commands
 
 Thin wrappers over Aptos Node API.
 
@@ -172,12 +162,20 @@ aptly table item <handle> --key-type <type> --value-type <type> --key <json>
 aptly view <function> --type-args <types> --args <json_args>
 
 # Tx
-# TODO: list tx commands besides what's mentioned above
+aptly tx <version_or_hash>
+aptly tx list --limit 25 --start 0
+aptly tx encode < unsigned_txn.json
+aptly tx simulate <sender_address> < payload.json
+aptly tx submit < signed_txn.json
+aptly tx trace <version_or_hash> [--local-tracer [tracer_bin]]
+aptly tx balance-change [version_or_hash] [--aggregate]
 ```
 
 ## TODOs
 
 - [ ] install script for aptos-script-compose
 - [ ] aptos-script-compose should skip the top layer "steps"
+- [ ] add tx compose subcommand
 - [ ] decompile to stdout
+- [ ] decompile args should be identical to source-code args
 - [ ] visualize tx trace with --open
