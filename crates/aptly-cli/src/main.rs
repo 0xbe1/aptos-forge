@@ -17,7 +17,7 @@ use commands::table::{run_table, TableCommand};
 use commands::tx::{run_tx, TxCommand};
 use commands::view::{run_view, ViewCommand};
 
-const DEFAULT_RPC_URL: &str = "https://api.mainnet.aptoslabs.com/v1";
+const DEFAULT_RPC_URL: &str = "https://rpc.sentio.xyz/aptos/v1";
 
 #[derive(Parser)]
 #[command(name = "aptly")]
