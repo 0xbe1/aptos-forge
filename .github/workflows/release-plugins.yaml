@@ -35,7 +35,6 @@ env:
 
 jobs:
   build:
-    if: ${{ inputs.plugin == 'both' || inputs.plugin == matrix.plugin.name }}
     strategy:
       fail-fast: false
       matrix:
@@ -64,6 +63,7 @@ jobs:
     runs-on: ${{ matrix.target.runner }}
     steps:
       - name: Checkout plugin source repository
+        if: ${{ inputs.plugin == 'both' || inputs.plugin == matrix.plugin.name }}
         uses: actions/checkout@v4
         with:
           repository: ${{ matrix.plugin.source_repo }}
@@ -72,19 +72,23 @@ jobs:
           path: source
 
       - name: Set up Rust
+        if: ${{ inputs.plugin == 'both' || inputs.plugin == matrix.plugin.name }}
         uses: dtolnay/rust-toolchain@stable
 
       - name: Build
+        if: ${{ inputs.plugin == 'both' || inputs.plugin == matrix.plugin.name }}
         working-directory: source
         run: ${{ matrix.plugin.build_cmd }}
 
       - name: Create archive
+        if: ${{ inputs.plugin == 'both' || inputs.plugin == matrix.plugin.name }}
         run: |
           cp "source/${{ matrix.plugin.build_output }}" "${{ matrix.plugin.name }}"
           chmod +x "${{ matrix.plugin.name }}"
           tar -czvf "${{ matrix.plugin.name }}_${RELEASE_TAG}_${{ matrix.target.os }}_${{ matrix.target.arch }}.tar.gz" "${{ matrix.plugin.name }}"
 
       - name: Upload artifact
+        if: ${{ inputs.plugin == 'both' || inputs.plugin == matrix.plugin.name }}
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.plugin.name }}_${{ matrix.target.os }}_${{ matrix.target.arch }}
