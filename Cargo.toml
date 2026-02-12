@@ -11,6 +11,7 @@ edition = "2021"
 license = "MIT"
 
 [workspace.metadata.release]
+consolidate-commits = false
 pre-release-commit-message = "chore: Release {{crate_name}} v{{version}}"
 tag-message = "chore: Release {{crate_name}} v{{version}}"
 
