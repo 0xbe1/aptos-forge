@@ -1,4 +1,4 @@
-use crate::plugin_tools::resolve_aptos_tracer_bin;
+use crate::plugin_tools::{resolve_aptos_script_compose_bin, resolve_aptos_tracer_bin};
 use anyhow::{anyhow, Context, Result};
 use aptly_aptos::AptosClient;
 use clap::{Args, Subcommand};
@@ -37,6 +37,8 @@ pub(crate) enum TxSubcommand {
     Simulate(TxSimulateArgs),
     #[command(about = "Submit a signed transaction JSON from stdin")]
     Submit,
+    #[command(about = "Compose script bytecode from batched call payload JSON on stdin")]
+    Compose(TxComposeArgs),
     #[command(about = "Fetch and print transaction call trace")]
     Trace(TxTraceArgs),
     #[command(
@@ -83,6 +85,19 @@ pub(crate) struct TxTraceArgs {
     pub(crate) local_tracer: Option<Option<String>>,
 }
 
+#[derive(Args)]
+pub(crate) struct TxComposeArgs {
+    /// Explicit aptos-script-compose binary path.
+    #[arg(long = "script-compose-bin")]
+    pub(crate) script_compose_bin: Option<String>,
+    /// Keep source metadata in generated script output.
+    #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
+    pub(crate) with_metadata: bool,
+    /// Emit script payload JSON instead of raw 0x-prefixed script bytes.
+    #[arg(long, default_value_t = false)]
+    pub(crate) emit_script_payload: bool,
+}
+
 #[derive(Debug, Clone, Serialize)]
 struct BalanceChange {
     #[serde(rename = "type")]
@@ -118,6 +133,7 @@ pub(crate) fn run_tx(client: &AptosClient, rpc_url: &str, command: TxCommand) ->
         }
         (Some(TxSubcommand::Encode), _) => run_tx_encode(client),
         (Some(TxSubcommand::Simulate(args)), _) => run_tx_simulate(client, &args),
+        (Some(TxSubcommand::Compose(args)), _) => run_tx_compose(rpc_url, &args),
         (Some(TxSubcommand::Trace(args)), _) => run_tx_trace(client, rpc_url, &args),
         (Some(TxSubcommand::Submit), _) => {
             let reader = io::stdin();
@@ -195,6 +211,43 @@ fn run_tx_simulate(client: &AptosClient, args: &TxSimulateArgs) -> Result<()> {
     }
 
     crate::print_pretty_json(&response)
+}
+
+fn run_tx_compose(rpc_url: &str, args: &TxComposeArgs) -> Result<()> {
+    if io::stdin().is_terminal() {
+        return Err(anyhow!(
+            "missing compose payload on stdin. Example: `aptly tx compose < payload.json`"
+        ));
+    }
+
+    let script_compose_bin = resolve_aptos_script_compose_bin(args.script_compose_bin.as_deref())?;
+
+    let mut command = Command::new(&script_compose_bin);
+    command
+        .arg("--rpc-url")
+        .arg(rpc_url.trim())
+        .arg("--with-metadata")
+        .arg(args.with_metadata.to_string());
+    if args.emit_script_payload {
+        command.arg("--emit-script-payload");
+    }
+
+    let status = command
+        .stdin(Stdio::inherit())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .status()
+        .with_context(|| {
+            format!(
+                "failed to execute aptos-script-compose at {}",
+                script_compose_bin.display()
+            )
+        })?;
+    if !status.success() {
+        return Err(anyhow!("aptos-script-compose exited with status {status}"));
+    }
+
+    Ok(())
 }
 
 fn read_json_from_stdin(error_message: &str) -> Result<Value> {

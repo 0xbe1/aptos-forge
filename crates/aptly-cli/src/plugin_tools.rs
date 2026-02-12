@@ -356,6 +356,25 @@ pub fn aptos_script_compose_install_hint() -> String {
     .join("\n")
 }
 
+pub fn resolve_aptos_script_compose_bin(explicit_bin: Option<&str>) -> Result<PathBuf> {
+    let result = resolve_aptos_script_compose(explicit_bin);
+    let path = result.path.ok_or_else(|| {
+        anyhow!(
+            "aptos-script-compose plugin is not installed.\n{}",
+            aptos_script_compose_install_hint()
+        )
+    })?;
+
+    if !path.is_file() {
+        return Err(anyhow!(
+            "aptos-script-compose binary was resolved but does not exist: {}",
+            path.display()
+        ));
+    }
+
+    Ok(path)
+}
+
 fn resolve_move_decompiler(explicit_bin: Option<&str>) -> DiscoveryResult {
     if let Some(bin) = explicit_bin {
         if !bin.trim().is_empty() {

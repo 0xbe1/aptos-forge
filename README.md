@@ -171,13 +171,14 @@ aptly tx list --limit 25 --start 0
 aptly tx encode < unsigned_txn.json
 aptly tx simulate <sender_address> < payload.json
 aptly tx submit < signed_txn.json
+aptly tx compose < compose_payload.json
 aptly tx trace <version_or_hash> [--local-tracer [tracer_bin]]
 aptly tx balance-change [version_or_hash] [--aggregate]
 ```
 
 ## TODOs
 
-- [ ] add tx compose subcommand
 - [ ] decompile to stdout
 - [ ] decompile args should be identical to source-code args
 - [ ] visualize tx trace with --open
+- [ ] release move-decompiler and aptos-tracer

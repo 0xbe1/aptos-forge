@@ -52,7 +52,7 @@ enum Command {
     Table(TableCommand),
     #[command(about = "Execute view functions")]
     View(ViewCommand),
-    #[command(about = "Inspect, encode, submit, simulate, and trace transactions")]
+    #[command(about = "Inspect, encode, submit, simulate, compose, and trace transactions")]
     Tx(TxCommand),
     #[command(about = "Print build version information")]
     Version,
