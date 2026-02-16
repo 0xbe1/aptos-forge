@@ -14,7 +14,11 @@ build:
 	cp target/release/$(BINARY) ./$(BINARY)
 
 install:
-	cargo install --path crates/aptly-cli
+	APTLY_VERSION=$(CURRENT_VERSION) \
+	APTLY_GIT_SHA=$(COMMIT_SHA) \
+	APTLY_BUILD_DATE=$(BUILD_DATE) \
+	cargo build -p aptly-cli --release --bin $(BINARY)
+	install -m 755 target/release/$(BINARY) /usr/local/bin/$(BINARY)
 
 release:
 	@echo "Local release targets:"
