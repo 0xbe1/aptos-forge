@@ -34,3 +34,13 @@ pub(crate) fn shorten_addr(value: &str) -> String {
         value.to_owned()
     }
 }
+
+pub(crate) fn with_optional_ledger_version(path: &str, ledger_version: Option<u64>) -> String {
+    match ledger_version {
+        Some(version) => {
+            let separator = if path.contains('?') { '&' } else { '?' };
+            format!("{path}{separator}ledger_version={version}")
+        }
+        None => path.to_owned(),
+    }
+}

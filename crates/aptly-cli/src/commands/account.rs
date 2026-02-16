@@ -9,7 +9,9 @@ use std::collections::HashMap;
 use std::io::Read;
 use std::str::FromStr;
 
-use crate::commands::common::{get_nested_string, parse_u64, shorten_addr, value_to_string};
+use crate::commands::common::{
+    get_nested_string, parse_u64, shorten_addr, value_to_string, with_optional_ledger_version,
+};
 
 const PACKAGE_REGISTRY_TYPE: &str = "0x1::code::PackageRegistry";
 const FUNGIBLE_METADATA_TYPE: &str = "0x1::fungible_asset::Metadata";
@@ -49,6 +51,9 @@ pub(crate) enum AccountSubcommand {
 pub(crate) struct AddressArg {
     /// Account address (`0x...`).
     pub(crate) address: String,
+    /// Optional ledger version for historical reads.
+    #[arg(long)]
+    pub(crate) ledger_version: Option<u64>,
 }
 
 #[derive(Args)]
@@ -57,6 +62,9 @@ pub(crate) struct ResourceArgs {
     pub(crate) address: String,
     /// Fully-qualified Move resource type.
     pub(crate) resource_type: String,
+    /// Optional ledger version for historical reads.
+    #[arg(long)]
+    pub(crate) ledger_version: Option<u64>,
 }
 
 #[derive(Args)]
@@ -65,6 +73,9 @@ pub(crate) struct ModuleArgs {
     pub(crate) address: String,
     /// Module name.
     pub(crate) module_name: String,
+    /// Optional ledger version for historical reads.
+    #[arg(long)]
+    pub(crate) ledger_version: Option<u64>,
     /// Print only ABI from module response.
     #[arg(long)]
     pub(crate) abi: bool,
@@ -79,6 +90,9 @@ pub(crate) struct BalanceArgs {
     pub(crate) address: String,
     /// Optional asset type tag; defaults to AptosCoin.
     pub(crate) asset_type: Option<String>,
+    /// Optional ledger version for historical reads.
+    #[arg(long)]
+    pub(crate) ledger_version: Option<u64>,
 }
 
 #[derive(Args)]
@@ -114,6 +128,9 @@ pub(crate) struct SourceCodeArgs {
     /// Optional package name filter.
     #[arg(long = "package")]
     pub(crate) package_name: Option<String>,
+    /// Optional ledger version for historical reads.
+    #[arg(long)]
+    pub(crate) ledger_version: Option<u64>,
     /// Print raw package/module/source JSON.
     #[arg(long, default_value_t = false)]
     pub(crate) raw: bool,
@@ -144,21 +161,35 @@ struct AssetMetadata {
 pub(crate) fn run_account(client: &AptosClient, command: AccountCommand) -> Result<()> {
     match (command.command, command.address) {
         (Some(AccountSubcommand::Resources(args)), _) => {
-            let value = client.get_json(&format!("/accounts/{}/resources", args.address))?;
+            let path = with_optional_ledger_version(
+                &format!("/accounts/{}/resources", args.address),
+                args.ledger_version,
+            );
+            let value = client.get_json(&path)?;
             crate::print_pretty_json(&value)
         }
         (Some(AccountSubcommand::Resource(args)), _) => {
             let encoded = urlencoding::encode(&args.resource_type);
-            let value =
-                client.get_json(&format!("/accounts/{}/resource/{encoded}", args.address))?;
+            let path = with_optional_ledger_version(
+                &format!("/accounts/{}/resource/{encoded}", args.address),
+                args.ledger_version,
+            );
+            let value = client.get_json(&path)?;
             crate::print_pretty_json(&value)
         }
         (Some(AccountSubcommand::Modules(args)), _) => {
-            let value = client.get_json(&format!("/accounts/{}/modules", args.address))?;
+            let path = with_optional_ledger_version(
+                &format!("/accounts/{}/modules", args.address),
+                args.ledger_version,
+            );
+            let value = client.get_json(&path)?;
             crate::print_pretty_json(&value)
         }
         (Some(AccountSubcommand::Module(args)), _) => {
-            let path = format!("/accounts/{}/module/{}", args.address, args.module_name);
+            let path = with_optional_ledger_version(
+                &format!("/accounts/{}/module/{}", args.address, args.module_name),
+                args.ledger_version,
+            );
             let value = client.get_json(&path)?;
 
             if !args.abi && !args.bytecode {
@@ -178,8 +209,11 @@ pub(crate) fn run_account(client: &AptosClient, command: AccountCommand) -> Resu
                 .asset_type
                 .unwrap_or_else(|| "0x1::aptos_coin::AptosCoin".to_owned());
             let encoded = urlencoding::encode(&asset_type);
-            let value =
-                client.get_json(&format!("/accounts/{}/balance/{encoded}", args.address))?;
+            let path = with_optional_ledger_version(
+                &format!("/accounts/{}/balance/{encoded}", args.address),
+                args.ledger_version,
+            );
+            let value = client.get_json(&path)?;
             crate::print_pretty_json(&value)
         }
         (Some(AccountSubcommand::Txs(args)), _) => {
@@ -205,7 +239,10 @@ pub(crate) fn run_account(client: &AptosClient, command: AccountCommand) -> Resu
 
 fn run_account_source_code(client: &AptosClient, args: &SourceCodeArgs) -> Result<()> {
     let resource_type = urlencoding::encode(PACKAGE_REGISTRY_TYPE);
-    let path = format!("/accounts/{}/resource/{resource_type}", args.address);
+    let path = with_optional_ledger_version(
+        &format!("/accounts/{}/resource/{resource_type}", args.address),
+        args.ledger_version,
+    );
 
     let resource = match client.get_json(&path) {
         Ok(data) => data,

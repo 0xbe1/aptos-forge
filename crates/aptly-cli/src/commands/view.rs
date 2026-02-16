@@ -3,6 +3,8 @@ use aptly_aptos::AptosClient;
 use clap::Args;
 use serde_json::{json, Value};
 
+use crate::commands::common::with_optional_ledger_version;
+
 #[derive(Args)]
 pub(crate) struct ViewCommand {
     /// Fully-qualified Move function, e.g. `0x1::coin::balance`.
@@ -13,6 +15,9 @@ pub(crate) struct ViewCommand {
     /// Repeatable JSON arguments.
     #[arg(long = "args")]
     pub(crate) args: Vec<String>,
+    /// Optional ledger version for historical view execution.
+    #[arg(long)]
+    pub(crate) ledger_version: Option<u64>,
 }
 
 pub(crate) fn run_view(client: &AptosClient, command: ViewCommand) -> Result<()> {
@@ -29,6 +34,7 @@ pub(crate) fn run_view(client: &AptosClient, command: ViewCommand) -> Result<()>
         "arguments": parsed_args
     });
 
-    let value = client.post_json("/view", &body)?;
+    let path = with_optional_ledger_version("/view", command.ledger_version);
+    let value = client.post_json(&path, &body)?;
     crate::print_pretty_json(&value)
 }
