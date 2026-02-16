@@ -36,7 +36,10 @@ struct Cli {
 enum Command {
     #[command(about = "Node and ledger endpoints")]
     Node(NodeCommand),
-    #[command(about = "Account resources, modules, balances, and transactions")]
+    #[command(
+        about = "Inspect account state (resources, modules, balances, and transactions)",
+        long_about = "Inspect account state and activity on Aptos. Use subcommands to query resources, modules, balances, transactions, transfer summaries, and published Move source metadata."
+    )]
     Account(AccountCommand),
     #[command(about = "Resolve known protocol labels to addresses")]
     Address(AddressCommand),

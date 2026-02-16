@@ -17,32 +17,37 @@ const PACKAGE_REGISTRY_TYPE: &str = "0x1::code::PackageRegistry";
 const FUNGIBLE_METADATA_TYPE: &str = "0x1::fungible_asset::Metadata";
 
 #[derive(Args)]
+#[command(
+    after_help = "Examples:\n  aptly account 0x1\n  aptly account resources 0x1\n  aptly account resource 0x1 0x1::coin::CoinInfo<0x1::aptos_coin::AptosCoin>\n  aptly account module 0x1 coin --abi\n  aptly account balance 0x1 0x1::aptos_coin::AptosCoin\n  aptly account txs 0x1 --limit 10\n  aptly account sends 0x1 --limit 50 --pretty\n  aptly account source-code 0x1 chain_id --raw\n\nIf source metadata is unavailable:\n  aptly decompile address <address>\n  aptly decompile module <address> <module_name>"
+)]
 pub(crate) struct AccountCommand {
     #[command(subcommand)]
     pub(crate) command: Option<AccountSubcommand>,
-    /// Account address when no subcommand is provided.
+    /// Account address (`0x...`) when no subcommand is provided.
+    #[arg(value_name = "ADDRESS")]
     pub(crate) address: Option<String>,
 }
 
 #[derive(Subcommand)]
 pub(crate) enum AccountSubcommand {
-    #[command(about = "List all resources for an account")]
+    #[command(about = "List all Move resources under an account")]
     Resources(AddressArg),
-    #[command(about = "Read a specific resource by type")]
+    #[command(about = "Read a Move resource by fully-qualified type")]
     Resource(ResourceArgs),
-    #[command(about = "List all modules published under an account")]
+    #[command(about = "List all Move modules published under an account")]
     Modules(AddressArg),
-    #[command(about = "Read a module, its ABI, or raw bytecode")]
+    #[command(about = "Read a module, its ABI only, or its raw bytecode")]
     Module(ModuleArgs),
-    #[command(about = "Read fungible asset balance for an account")]
+    #[command(about = "Read fungible asset balance for an account address")]
     Balance(BalanceArgs),
-    #[command(about = "List account transactions")]
+    #[command(about = "List account transactions (with --limit/--start pagination)")]
     Txs(TxsArgs),
     #[command(about = "Summarize outgoing transfers from account transactions")]
     Sends(SendsArgs),
     #[command(
         name = "source-code",
-        about = "Fetch published Move source metadata. If unavailable, use `aptly decompile`."
+        about = "Fetch published Move source metadata. If unavailable, use `aptly decompile`.",
+        after_help = "Fallback when source metadata is unavailable:\n  aptly decompile address <address>\n  aptly decompile module <address> <module_name>"
     )]
     SourceCode(SourceCodeArgs),
 }
@@ -50,8 +55,9 @@ pub(crate) enum AccountSubcommand {
 #[derive(Args)]
 pub(crate) struct AddressArg {
     /// Account address (`0x...`).
+    #[arg(value_name = "ADDRESS")]
     pub(crate) address: String,
-    /// Optional ledger version for historical reads.
+    /// Read from a historical ledger version.
     #[arg(long)]
     pub(crate) ledger_version: Option<u64>,
 }
@@ -59,10 +65,12 @@ pub(crate) struct AddressArg {
 #[derive(Args)]
 pub(crate) struct ResourceArgs {
     /// Account address (`0x...`).
+    #[arg(value_name = "ADDRESS")]
     pub(crate) address: String,
     /// Fully-qualified Move resource type.
+    #[arg(value_name = "RESOURCE_TYPE")]
     pub(crate) resource_type: String,
-    /// Optional ledger version for historical reads.
+    /// Read from a historical ledger version.
     #[arg(long)]
     pub(crate) ledger_version: Option<u64>,
 }
@@ -70,10 +78,12 @@ pub(crate) struct ResourceArgs {
 #[derive(Args)]
 pub(crate) struct ModuleArgs {
     /// Account address (`0x...`).
+    #[arg(value_name = "ADDRESS")]
     pub(crate) address: String,
     /// Module name.
+    #[arg(value_name = "MODULE_NAME")]
     pub(crate) module_name: String,
-    /// Optional ledger version for historical reads.
+    /// Read from a historical ledger version.
     #[arg(long)]
     pub(crate) ledger_version: Option<u64>,
     /// Print only ABI from module response.
@@ -87,10 +97,12 @@ pub(crate) struct ModuleArgs {
 #[derive(Args)]
 pub(crate) struct BalanceArgs {
     /// Account address (`0x...`).
+    #[arg(value_name = "ADDRESS")]
     pub(crate) address: String,
     /// Optional asset type tag; defaults to AptosCoin.
+    #[arg(value_name = "ASSET_TYPE")]
     pub(crate) asset_type: Option<String>,
-    /// Optional ledger version for historical reads.
+    /// Read from a historical ledger version.
     #[arg(long)]
     pub(crate) ledger_version: Option<u64>,
 }
@@ -98,6 +110,7 @@ pub(crate) struct BalanceArgs {
 #[derive(Args)]
 pub(crate) struct TxsArgs {
     /// Account address (`0x...`).
+    #[arg(value_name = "ADDRESS")]
     pub(crate) address: String,
     /// Maximum number of transactions to return.
     #[arg(long, default_value_t = 25)]
@@ -110,6 +123,7 @@ pub(crate) struct TxsArgs {
 #[derive(Args)]
 pub(crate) struct SendsArgs {
     /// Account address (`0x...`).
+    #[arg(value_name = "ADDRESS")]
     pub(crate) address: String,
     /// Maximum number of transactions to scan.
     #[arg(long, default_value_t = 25)]
@@ -122,13 +136,15 @@ pub(crate) struct SendsArgs {
 #[derive(Args)]
 pub(crate) struct SourceCodeArgs {
     /// Account address (`0x...`).
+    #[arg(value_name = "ADDRESS")]
     pub(crate) address: String,
     /// Optional module name filter.
+    #[arg(value_name = "MODULE_NAME")]
     pub(crate) module_name: Option<String>,
     /// Optional package name filter.
     #[arg(long = "package")]
     pub(crate) package_name: Option<String>,
-    /// Optional ledger version for historical reads.
+    /// Read from a historical ledger version.
     #[arg(long)]
     pub(crate) ledger_version: Option<u64>,
     /// Print raw package/module/source JSON.
