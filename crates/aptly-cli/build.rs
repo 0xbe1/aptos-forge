@@ -23,7 +23,13 @@ fn main() {
 
 fn git_describe() -> Option<String> {
     Command::new("git")
-        .args(["describe", "--tags", "--match", "aptly-cli-v*", "--abbrev=0"])
+        .args([
+            "describe",
+            "--tags",
+            "--match",
+            "aptly-cli-v*",
+            "--abbrev=0",
+        ])
         .output()
         .ok()
         .filter(|o| o.status.success())
