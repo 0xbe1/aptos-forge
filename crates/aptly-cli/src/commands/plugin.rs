@@ -6,6 +6,9 @@ use anyhow::{anyhow, Result};
 use clap::{Args, Subcommand};
 
 #[derive(Args)]
+#[command(
+    after_help = "Examples:\n  aptly plugin list\n  aptly plugin doctor\n  aptly plugin doctor --decompiler-bin ./target/cli/move-decompiler"
+)]
 pub(crate) struct PluginCommand {
     #[command(subcommand)]
     pub(crate) command: PluginSubcommand,

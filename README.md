@@ -145,44 +145,65 @@ primary_fungible_store::primary_fungible_store::transfer
     dispatchable_fungible_asset::usdt::deposit
 ```
 
-## Other Commands
+## CLI Command Reference
 
-Thin wrappers over Aptos Node API.
+All commands accept global `--rpc-url <URL>`.
 
 ```bash
 # Node
 aptly node ledger|health|info|spec|estimate-gas-price
 
 # Account
-aptly account <addr>
-aptly account resources|modules <addr>
-aptly account resource <addr> <type>
-aptly account module <addr> <name>
-aptly account balance <addr> [asset]
-aptly account txs <addr> --limit 10
+aptly account <address>
+aptly account resources <address> [--ledger-version <version>]
+aptly account resource <address> <resource_type> [--ledger-version <version>]
+aptly account modules <address> [--ledger-version <version>]
+aptly account module <address> <module_name> [--abi|--bytecode] [--ledger-version <version>]
+aptly account balance <address> [asset_type] [--ledger-version <version>]
+aptly account txs <address> [--limit 25] [--start 0]
+aptly account sends <address> [--limit 25] [--pretty]
+aptly account source-code <address> [module_name] [--package <name>] [--ledger-version <version>] [--raw]
+# fallback when source metadata is missing:
+aptly decompile address <address>
+aptly decompile module <address> <module_name>
+
+# Address
+aptly address <query>
+
+# Plugin
+aptly plugin list
+aptly plugin doctor [--decompiler-bin <path>] [--tracer-bin <path>] [--script-compose-bin <path>]
+
+# Decompile
+aptly decompile module <address> <module_name> [--out-dir <dir>] [--keep-bytecode]
+aptly decompile address <address> [--module <name> ...] [--out-dir <dir>] [--keep-bytecode]
+aptly decompile raw -- <move-decompiler-args...>
 
 # Block
-aptly block <height>
-aptly block by-version <version>
+aptly block <height> [--with-transactions]
+aptly block by-version <version> [--with-transactions]
 
 # Events
-aptly events <addr> <creation_number> --limit 10
+aptly events <address> <creation_number> [--limit 25] [--start 0]
 
 # Table
-aptly table item <handle> --key-type <type> --value-type <type> --key <json>
+aptly table item <table_handle> --key-type <type> --value-type <type> --key <json>
 
 # View
-aptly view <function> --type-args <types> --args <json_args>
+aptly view <function> [--type-args <types> ...] [--args <json_args> ...] [--ledger-version <version>]
 
 # Tx
 aptly tx <version_or_hash>
-aptly tx list --limit 25 --start 0
+aptly tx list [--limit 25] [--start 0]
 aptly tx encode < unsigned_txn.json
 aptly tx simulate <sender_address> < payload.json
 aptly tx submit < signed_txn.json
-aptly tx compose < compose_payload.json
+aptly tx compose [--script-compose-bin <path>] [--with-metadata true|false] [--emit-script-payload] < compose_payload.json
 aptly tx trace <version_or_hash> [--local-tracer [tracer_bin]]
 aptly tx balance-change [version_or_hash] [--aggregate]
+
+# Version
+aptly version
 ```
 
 ## TODOs

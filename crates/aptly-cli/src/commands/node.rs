@@ -3,6 +3,9 @@ use aptly_aptos::AptosClient;
 use clap::{Args, Subcommand};
 
 #[derive(Args)]
+#[command(
+    after_help = "Examples:\n  aptly node ledger\n  aptly node health\n  aptly --rpc-url https://rpc.sentio.xyz/aptos/v1 node estimate-gas-price"
+)]
 pub(crate) struct NodeCommand {
     #[command(subcommand)]
     pub(crate) command: NodeSubcommand,

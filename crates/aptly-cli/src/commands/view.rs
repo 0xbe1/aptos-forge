@@ -6,8 +6,12 @@ use serde_json::{json, Value};
 use crate::commands::common::with_optional_ledger_version;
 
 #[derive(Args)]
+#[command(
+    after_help = "Examples:\n  aptly view 0x1::coin::balance --type-args 0x1::aptos_coin::AptosCoin --args '\"0x1\"'\n  aptly view 0x1::stake::get_current_epoch --ledger-version 4300000000"
+)]
 pub(crate) struct ViewCommand {
     /// Fully-qualified Move function, e.g. `0x1::coin::balance`.
+    #[arg(value_name = "FUNCTION")]
     pub(crate) function: String,
     /// Repeatable type arguments.
     #[arg(long = "type-args")]

@@ -3,10 +3,14 @@ use aptly_aptos::AptosClient;
 use clap::{Args, Subcommand};
 
 #[derive(Args)]
+#[command(
+    after_help = "Examples:\n  aptly block 1000\n  aptly block 1000 --with-transactions\n  aptly block by-version 4300326632"
+)]
 pub(crate) struct BlockCommand {
     #[command(subcommand)]
     pub(crate) command: Option<BlockSubcommand>,
     /// Block height used when no subcommand is provided.
+    #[arg(value_name = "HEIGHT")]
     pub(crate) height: Option<String>,
     /// Include full transaction payloads in block response.
     #[arg(long, default_value_t = false)]
@@ -22,6 +26,7 @@ pub(crate) enum BlockSubcommand {
 #[derive(Args)]
 pub(crate) struct ByVersionArgs {
     /// Ledger version to resolve containing block.
+    #[arg(value_name = "VERSION")]
     pub(crate) version: String,
     /// Include full transaction payloads in block response.
     #[arg(long, default_value_t = false)]

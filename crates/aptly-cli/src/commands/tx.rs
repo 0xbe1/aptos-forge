@@ -19,11 +19,15 @@ const DEFAULT_TRACER_REQUEST_TIMEOUT: Duration = Duration::from_secs(300);
 const SENTIO_TRACE_BASE_URL: &str = "https://app.sentio.xyz";
 
 #[derive(Args)]
+#[command(
+    after_help = "Examples:\n  aptly tx 4300326632\n  aptly tx 0xf44b2ea4a0cd55a31559fc022a2fba12aa81c46dcfce31a050d9d42d93a7dae5\n  aptly tx list --limit 10 --start 0\n  aptly tx encode < unsigned_txn.json\n  aptly tx simulate 0x1 < payload.json\n  aptly tx submit < signed_txn.json\n  aptly tx compose < compose_payload.json\n  aptly tx trace 4300326632 --local-tracer\n  aptly tx balance-change 4300326632 --aggregate"
+)]
 pub(crate) struct TxCommand {
     #[command(subcommand)]
     pub(crate) command: Option<TxSubcommand>,
     /// Transaction version (u64) or hash (0x...).
     /// Used when no subcommand is provided.
+    #[arg(value_name = "VERSION_OR_HASH")]
     pub(crate) version_or_hash: Option<String>,
 }
 
@@ -62,6 +66,7 @@ pub(crate) struct TxListArgs {
 pub(crate) struct TxBalanceChangeArgs {
     /// Transaction version (u64) or hash (0x...).
     /// If omitted, reads full transaction JSON from stdin.
+    #[arg(value_name = "VERSION_OR_HASH")]
     pub(crate) version_or_hash: Option<String>,
     /// Aggregate deltas by `(account, asset)` pair.
     #[arg(long, default_value_t = false)]
@@ -71,12 +76,14 @@ pub(crate) struct TxBalanceChangeArgs {
 #[derive(Args)]
 pub(crate) struct TxSimulateArgs {
     /// Sender account address used to resolve sequence number.
+    #[arg(value_name = "SENDER")]
     pub(crate) sender: String,
 }
 
 #[derive(Args)]
 pub(crate) struct TxTraceArgs {
     /// Transaction version (u64) or hash (0x...).
+    #[arg(value_name = "VERSION_OR_HASH")]
     pub(crate) version_or_hash: String,
     /// Use a local aptos-tracer binary instead of Sentio hosted tracing.
     /// The default hosted mode is usually faster; local mode helps when your

@@ -8,6 +8,9 @@ use std::path::{Path, PathBuf};
 use tempfile::tempdir;
 
 #[derive(Args)]
+#[command(
+    after_help = "Examples:\n  aptly decompile module 0x1 coin\n  aptly decompile address 0x1 --module coin --module aptos_coin\n  aptly decompile raw -- --help\n\nCommon fallback when source metadata is unavailable:\n  aptly decompile address <address>\n  aptly decompile module <address> <module_name>"
+)]
 pub(crate) struct DecompileCommand {
     #[command(subcommand)]
     pub(crate) command: DecompileSubcommand,
@@ -36,8 +39,10 @@ pub(crate) struct DecompileRawArgs {
 #[derive(Args)]
 pub(crate) struct DecompileModuleArgs {
     /// Account address (`0x...`).
+    #[arg(value_name = "ADDRESS")]
     pub(crate) address: String,
     /// Module name.
+    #[arg(value_name = "MODULE")]
     pub(crate) module: String,
     /// Explicit move-decompiler binary path.
     #[arg(long = "decompiler-bin")]
@@ -59,6 +64,7 @@ pub(crate) struct DecompileModuleArgs {
 #[derive(Args)]
 pub(crate) struct DecompileAddressArgs {
     /// Account address (`0x...`).
+    #[arg(value_name = "ADDRESS")]
     pub(crate) address: String,
     /// Module name filter (repeatable). If omitted, decompile all modules.
     #[arg(long = "module")]

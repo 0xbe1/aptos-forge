@@ -3,10 +3,15 @@ use aptly_aptos::AptosClient;
 use clap::Args;
 
 #[derive(Args)]
+#[command(
+    after_help = "Examples:\n  aptly events 0x1 0 --limit 10\n  aptly events 0x1 0 --start 100 --limit 25"
+)]
 pub(crate) struct EventsCommand {
     /// Account address that owns the event handle.
+    #[arg(value_name = "ADDRESS")]
     pub(crate) address: String,
     /// Event handle creation number.
+    #[arg(value_name = "CREATION_NUMBER")]
     pub(crate) creation_number: String,
     /// Maximum number of events to return.
     #[arg(long, default_value_t = 25)]

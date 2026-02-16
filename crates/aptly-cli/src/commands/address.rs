@@ -7,8 +7,10 @@ const LABELS_URL: &str =
     "https://raw.githubusercontent.com/ThalaLabs/aptos-labels/main/mainnet.json";
 
 #[derive(Args)]
+#[command(after_help = "Examples:\n  aptly address thala\n  aptly address panora")]
 pub(crate) struct AddressCommand {
     /// Case-insensitive substring to match against known labels.
+    #[arg(value_name = "QUERY")]
     pub(crate) query: String,
 }
 

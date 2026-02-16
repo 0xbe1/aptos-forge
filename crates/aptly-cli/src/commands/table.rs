@@ -4,6 +4,9 @@ use clap::{Args, Subcommand};
 use serde_json::{json, Value};
 
 #[derive(Args)]
+#[command(
+    after_help = "Examples:\n  aptly table item <table_handle> --key-type address --value-type u64 --key '\"0x1\"'\n  aptly table item <table_handle> --key-type u64 --value-type 0x1::coin::CoinInfo<0x1::aptos_coin::AptosCoin> --key '1'"
+)]
 pub(crate) struct TableCommand {
     #[command(subcommand)]
     pub(crate) command: TableSubcommand,
@@ -18,6 +21,7 @@ pub(crate) enum TableSubcommand {
 #[derive(Args)]
 pub(crate) struct TableItemArgs {
     /// On-chain table handle (`0x...`).
+    #[arg(value_name = "TABLE_HANDLE")]
     pub(crate) table_handle: String,
     /// Move type tag for the table key.
     #[arg(long)]

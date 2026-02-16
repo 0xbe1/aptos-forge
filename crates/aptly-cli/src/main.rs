@@ -34,28 +34,55 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
-    #[command(about = "Node and ledger endpoints")]
+    #[command(
+        about = "Inspect node and ledger endpoints",
+        long_about = "Inspect Aptos node status and metadata. Use subcommands to fetch ledger state, OpenAPI spec, node health, build info, and gas price estimates."
+    )]
     Node(NodeCommand),
     #[command(
         about = "Inspect account state (resources, modules, balances, and transactions)",
         long_about = "Inspect account state and activity on Aptos. Use subcommands to query resources, modules, balances, transactions, transfer summaries, and published Move source metadata."
     )]
     Account(AccountCommand),
-    #[command(about = "Resolve known protocol labels to addresses")]
+    #[command(
+        about = "Resolve known protocol labels to addresses",
+        long_about = "Resolve protocol and ecosystem labels to on-chain addresses using a curated label source."
+    )]
     Address(AddressCommand),
-    #[command(about = "Inspect optional external plugins")]
+    #[command(
+        about = "Inspect optional external plugins",
+        long_about = "Inspect optional binaries (`move-decompiler`, `aptos-tracer`, `aptos-script-compose`) used by decompile/trace/compose workflows."
+    )]
     Plugin(PluginCommand),
-    #[command(about = "Decompile Move bytecode when source is unavailable")]
+    #[command(
+        about = "Decompile Move bytecode when source is unavailable",
+        long_about = "Decompile Move module bytecode when published source metadata is unavailable from `aptly account source-code`."
+    )]
     Decompile(DecompileCommand),
-    #[command(about = "Fetch blocks by height or version")]
+    #[command(
+        about = "Fetch blocks by height or version",
+        long_about = "Fetch block data either by block height or by a containing ledger version."
+    )]
     Block(BlockCommand),
-    #[command(about = "Read events by account creation number")]
+    #[command(
+        about = "Read events by account creation number",
+        long_about = "Read account events using the account address and event handle creation number, with pagination support."
+    )]
     Events(EventsCommand),
-    #[command(about = "Read Move table items")]
+    #[command(
+        about = "Read Move table items",
+        long_about = "Read Move table entries by table handle and typed key/value descriptors."
+    )]
     Table(TableCommand),
-    #[command(about = "Execute view functions")]
+    #[command(
+        about = "Execute view functions",
+        long_about = "Execute read-only Move view functions with type arguments, JSON arguments, and optional historical ledger version."
+    )]
     View(ViewCommand),
-    #[command(about = "Inspect, encode, submit, simulate, compose, and trace transactions")]
+    #[command(
+        about = "Inspect, encode, submit, simulate, compose, and trace transactions",
+        long_about = "Inspect transactions by version/hash, list transactions, encode or submit payloads via stdin, simulate entry functions, compose scripts, fetch traces, and summarize balance changes."
+    )]
     Tx(TxCommand),
     #[command(about = "Print build version information")]
     Version,
